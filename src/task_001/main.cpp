@@ -18,7 +18,7 @@ int main()
 	const int Nx = 100;
 	const double dx = 1.;
 	
-	double dt = 0.01;
+	double dt = 0.001;
 	double finish_time = 10.;
 	
 	// frac
@@ -60,6 +60,7 @@ int main()
 	// time cycle
 	while(time < finish_time)
 	{
+#pragma omp parallel for
 		for (int ix = 0; ix < Nx; ix++)
 		{
 			rpart[ix] = 0.;
@@ -68,6 +69,7 @@ int main()
 		// fill right part with fractional derivative
 		for(int time_layer = 1; time_layer < N_calc_time_layers; time_layer++)
 		{
+#pragma omp parallel for
 			for(int ix = 0; ix < Nx; ix++)
 			{
 				rpart[ix] -= timelayer_fields[(it - time_layer) % time_layers_cnt][ix] * GL_coeffs[time_layer] / dt_alpha;
@@ -78,10 +80,14 @@ int main()
 		solve_scheme.solve_transfer_explicitly(vel, field, field_new, dt_alpha, rpart);
 		
 		// save last field
-		timelayer_fields[it % time_layers_cnt] = field_new;
+#pragma omp parallel for
+		for (int ix = 0; ix < Nx; ix++)
+		{
+			timelayer_fields[it % time_layers_cnt][ix] = field_new[ix];
+			field[ix] = field_new[ix];
+		}
 		
 		// time counters ++
-		field = field_new;
 		time += dt;
 		it++;
 		std::cout << "Calculated " << time << " secs" << std::endl;
