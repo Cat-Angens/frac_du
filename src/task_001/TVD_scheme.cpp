@@ -72,7 +72,7 @@ double TVD_scheme::get_r_i_biased(const std::vector<double> &field, const std::v
 		field_dn = field[ix + 2];
 	}
 	
-	// TODO: сравнивать до заданной точности
+	// TODO: СЃСЂР°РІРЅРёРІР°С‚СЊ РґРѕ Р·Р°РґР°РЅРЅРѕР№ С‚РѕС‡РЅРѕСЃС‚Рё
 	if(field_cr == field_up){
 		if(field_cr - field_dn < 0.)
 			ri_curr = -1e6;
@@ -101,10 +101,10 @@ void TVD_scheme::fill_F(const std::vector<double> &field, const std::vector<doub
 	
 	fill_Phi(field, vel_edg);
 	
-	// расчет переноса через ребра выбранного направления
+	// СЂР°СЃС‡РµС‚ РїРµСЂРµРЅРѕСЃР° С‡РµСЂРµР· СЂРµР±СЂР° РІС‹Р±СЂР°РЅРЅРѕРіРѕ РЅР°РїСЂР°РІР»РµРЅРёСЏ
 	for(int ix = 0; ix < Nx - 1; ix++)
 	{
-		// рассматривается взаимодействие между ячейками ix и ix + 1
+		// СЂР°СЃСЃРјР°С‚СЂРёРІР°РµС‚СЃСЏ РІР·Р°РёРјРѕРґРµР№СЃС‚РІРёРµ РјРµР¶РґСѓ СЏС‡РµР№РєР°РјРё ix Рё ix + 1
 		
 		double vel_xy = vel_edg[ix] / dx;
 		

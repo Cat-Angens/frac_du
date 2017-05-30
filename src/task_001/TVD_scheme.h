@@ -13,7 +13,7 @@ class TVD_scheme
 	const double dx;
 	
 	std::vector<double>  Phi;
-	std::vector<std::vector<double>>  mat_F;     // 3-диагональная матрица
+	std::vector<std::vector<double>>  mat_F;     // 3-РґРёР°РіРѕРЅР°Р»СЊРЅР°СЏ РјР°С‚СЂРёС†Р°
 	
 	double get_r_i(const std::vector<double> &field, int ix, bool positive_stream) const;
 	double get_r_i_biased(const std::vector<double> &field, const std::vector<double> &vel_edg, int ix) const;

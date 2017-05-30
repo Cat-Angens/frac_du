@@ -118,4 +118,6 @@ void make_GL_coeff_vec(std::vector<double> &GL_vec, double alpha, int n)
 	
 	for(int i = 1; i < n + 1; i+=2)
 		GL_vec[i] *= -1.;
+	
+	return;
 }
