@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <vector>
 #include "TVD_scheme.h"
+#include <algorithm>
 
 void print_field(std::string filename, std::vector<double> &field);
 
@@ -17,13 +18,14 @@ int main()
 	const int Nx = 100;
 	const double dx = 1.;
 	
-	double dt = 0.1;
+	double dt = 0.01;
 	double finish_time = 10.;
 	
 	// frac
 	double t_len = 5.;
-	int    time_layers_cnt = int(t_len / dt);
+	int    time_layers_cnt = std::max(2, int(t_len / dt)); // minimum 2 layers - current and previous
 	std::vector<std::vector<double>> timelayer_fields(time_layers_cnt, std::vector<double>(Nx, 0.));
+	std::cout << "Time memory " << t_len << " secs (" << time_layers_cnt << " time steps)" << std::endl;
 	
 	// fields
 	std::vector<double> vel(Nx - 1, 2.);
@@ -43,32 +45,46 @@ int main()
 	
 	// time counters
 	double time = 0.;
-	int it = 0;
+	int it = 1;
 	
 	// Grunwald-Letnikov derivative coefficients
-	const double alpha = 0.7;
+	const double alpha = 0.9;
 	std::vector<double> GL_coeffs;
 	make_GL_coeff_vec(GL_coeffs, alpha, time_layers_cnt);
 	print_field(std::string("GL_coeffs.txt"), GL_coeffs);
+	double dt_alpha = pow(dt, alpha);
 	
 	// right-hand part (source and fractional time derivative)
 	std::vector<double> rpart(Nx, 0.);
-	rpart[Nx / 2] = 2.;
 	
 	// time cycle
 	while(time < finish_time)
 	{
+		for (int ix = 0; ix < Nx; ix++)
+		{
+			rpart[ix] = 0.;
+		}
+		const int N_calc_time_layers = std::min(time_layers_cnt, it + 1);
+		// fill right part with fractional derivative
+		for(int time_layer = 1; time_layer < N_calc_time_layers; time_layer++)
+		{
+			for(int ix = 0; ix < Nx; ix++)
+			{
+				rpart[ix] -= timelayer_fields[(it - time_layer) % time_layers_cnt][ix] * GL_coeffs[time_layer] / dt_alpha;
+			}
+		}
+		
 		// solve
-		solve_scheme.solve_transfer_explicitly(vel, field, field_new, dt, rpart);
+		solve_scheme.solve_transfer_explicitly(vel, field, field_new, dt_alpha, rpart);
+		
+		// save last field
+		timelayer_fields[it % time_layers_cnt] = field_new;
 		
 		// time counters ++
 		field = field_new;
 		time += dt;
 		it++;
 		std::cout << "Calculated " << time << " secs" << std::endl;
-		
-		// save last field
-		add_field_time(timelayer_fields, field_new, time_layers_cnt, it);
 		
 		// file print
 		std::ostringstream stringStream;

@@ -159,7 +159,7 @@ void TVD_scheme::solve_transfer_explicitly(const std::vector<double> &vel, const
 	
 	for (int ix = 0; ix < Nx; ix++)
 	{
-		field_new[ix] = field_old[ix] + right_part[ix] * dt;
+		field_new[ix] = right_part[ix] * dt;
 		
 		for (int adj = 0; adj < 3; adj++)
 		{
