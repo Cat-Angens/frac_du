@@ -25,7 +25,7 @@ public:
 	
 	TVD_scheme(int nx, double dx);
 	
-	void solve_transfer_explicitly(const std::vector<double> &vel, const std::vector<double> &field_old, std::vector<double> &field_new, const double dt);
+	void solve_transfer_explicitly(const std::vector<double> &vel, const std::vector<double> &field_old, std::vector<double> &field_new, const double dt, const std::vector<double> &right_part);
 	
 };
 

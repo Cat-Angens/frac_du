@@ -17,7 +17,7 @@ int main()
 	const int Nx = 100;
 	const double dx = 1.;
 	
-	double dt = 0.01;
+	double dt = 0.1;
 	double finish_time = 10.;
 	
 	// frac
@@ -27,7 +27,7 @@ int main()
 	
 	// fields
 	std::vector<double> vel(Nx - 1, 2.);
-	std::vector<double> field(Nx, 1.);
+	std::vector<double> field(Nx, 0.);
 	std::vector<double> field_new(Nx, 0.);
 	
 	// initial field values
@@ -45,16 +45,21 @@ int main()
 	double time = 0.;
 	int it = 0;
 	
+	// Grunwald-Letnikov derivative coefficients
 	const double alpha = 0.7;
 	std::vector<double> GL_coeffs;
 	make_GL_coeff_vec(GL_coeffs, alpha, time_layers_cnt);
 	print_field(std::string("GL_coeffs.txt"), GL_coeffs);
 	
+	// right-hand part (source and fractional time derivative)
+	std::vector<double> rpart(Nx, 0.);
+	rpart[Nx / 2] = 2.;
+	
 	// time cycle
 	while(time < finish_time)
 	{
 		// solve
-		solve_scheme.solve_transfer_explicitly(vel, field, field_new, dt);
+		solve_scheme.solve_transfer_explicitly(vel, field, field_new, dt, rpart);
 		
 		// time counters ++
 		field = field_new;

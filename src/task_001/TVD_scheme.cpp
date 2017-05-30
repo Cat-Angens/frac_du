@@ -140,7 +140,7 @@ double TVD_scheme::tvd_limit(const double r) const
 	
 }
 
-void TVD_scheme::solve_transfer_explicitly(const std::vector<double> &vel, const std::vector<double> &field_old, std::vector<double> &field_new, const double dt)
+void TVD_scheme::solve_transfer_explicitly(const std::vector<double> &vel, const std::vector<double> &field_old, std::vector<double> &field_new, const double dt, const std::vector<double> &right_part)
 {
 	fill_F(field_old, vel);
 	
@@ -159,7 +159,7 @@ void TVD_scheme::solve_transfer_explicitly(const std::vector<double> &vel, const
 	
 	for (int ix = 0; ix < Nx; ix++)
 	{
-		field_new[ix] = field_old[ix];
+		field_new[ix] = field_old[ix] + right_part[ix] * dt;
 		
 		for (int adj = 0; adj < 3; adj++)
 		{
