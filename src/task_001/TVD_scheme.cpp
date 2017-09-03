@@ -103,6 +103,7 @@ void TVD_scheme::solve_transfer_explicitly(const std::vector<double> &vel, const
 {
 	fill_F(field_old, vel);
 	
+#ifdef printmat
 	std::ofstream output_file;
 	output_file.open(std::string("mat_f.txt"), std::ios::app);
 	
@@ -115,6 +116,7 @@ void TVD_scheme::solve_transfer_explicitly(const std::vector<double> &vel, const
 		output_file << std::endl;
 	}
 	output_file << "################ FINISHED F ################" << std::endl << std::endl;
+#endif
 	
 #pragma omp parallel for
 	for (int ix = 0; ix < Nx; ix++)

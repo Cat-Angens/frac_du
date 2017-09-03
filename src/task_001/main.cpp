@@ -6,6 +6,8 @@
 #include "TVD_scheme.h"
 #include <algorithm>
 
+double get_Gamma(const double x);
+
 void print_field(std::string filename, std::vector<double> &field);
 
 void get_field_time(std::vector<std::vector<double>> &timelayer_fields, std::vector<double> &field, int time_layers_cnt, int time_layer);
@@ -13,14 +15,38 @@ void add_field_time(std::vector<std::vector<double>> &timelayer_fields, std::vec
 
 void make_GL_coeff_vec(std::vector<double> &GL_vec, double alpha, int n);
 
+double get_source(const double x, const double time)
+{
+	return 0.;
+}
+double get_initial_field(const double x)
+{
+	if (x > 10. && x < 20.)
+		return 1.;
+	return 0.;
+}
+
+void get_initial_field_vector(const double dx, const int Nx, std::vector<double> &field);
+void get_source_vector(const double time, const double dx, const int Nx, std::vector<double> &source);
+
+
 int main()
 {
 	const int Nx = 100;
 	const double dx = 1.;
 	
-	double dt = 0.001;
+	double dt = 0.01;
 	double finish_time = 10.;
 	
+	const double alpha = 0.9;
+	const double gamma_alpha = 0;
+	
+	for (int i = 1; i < 30; ++i)
+	{
+		double alpha_i = 0.1 * i + 0.05;
+		std::cout << "Gamma(" << alpha_i << ") = " << get_Gamma(alpha_i) << std::endl;
+	}
+	return 0.;
 	// frac
 	double t_len = 5.;
 	int    time_layers_cnt = std::max(2, int(t_len / dt)); // minimum 2 layers - current and previous
@@ -31,24 +57,21 @@ int main()
 	std::vector<double> vel(Nx - 1, 2.);
 	std::vector<double> field(Nx, 0.);
 	std::vector<double> field_new(Nx, 0.);
+	std::vector<double> time_deriv_GL_field(Nx, 0.);
+	std::vector<double> sources(Nx, 0.);
 	
-	// initial field values
-	const int ix_start = 10, ix_end = 20;
-	for(int ix = ix_start; ix < ix_end; ix++)
-	{
-		field[ix] = 5.;
-	}
-	timelayer_fields[0] = field;
+	// initial field values: w === 0 initally!
+	//get_initial_field_vector(dx, Nx, field);
+	//timelayer_fields[0] = field;
 	
 	// solver
-	TVD_scheme solve_scheme(Nx, dx);
+	TVD_scheme solving_scheme(Nx, dx);
 	
 	// time counters
 	double time = 0.;
 	int it = 1;
 	
 	// Grunwald-Letnikov derivative coefficients
-	const double alpha = 0.9;
 	std::vector<double> GL_coeffs;
 	make_GL_coeff_vec(GL_coeffs, alpha, time_layers_cnt);
 	print_field(std::string("GL_coeffs.txt"), GL_coeffs);
@@ -66,18 +89,30 @@ int main()
 			rpart[ix] = 0.;
 		}
 		const int N_calc_time_layers = std::min(time_layers_cnt, it + 1);
-		// fill right part with fractional derivative
-		for(int time_layer = 1; time_layer < N_calc_time_layers; time_layer++)
-		{
+		
+		// fill fractional time derivatives
 #pragma omp parallel for
-			for(int ix = 0; ix < Nx; ix++)
+		for(int ix = 0; ix < Nx; ix++)
+		{
+			time_deriv_GL_field[ix] = 0.;
+			for (int time_layer = 1; time_layer < N_calc_time_layers; time_layer++)
 			{
-				rpart[ix] -= timelayer_fields[(it - time_layer) % time_layers_cnt][ix] * GL_coeffs[time_layer] / dt_alpha;
+				time_deriv_GL_field[ix] += timelayer_fields[(it - time_layer) % time_layers_cnt][ix] * GL_coeffs[time_layer] / dt_alpha;
 			}
 		}
 		
+		// fill sources vector
+		get_source_vector(time, dx, Nx, sources);
+		
+		// fill right part
+#pragma omp parallel for
+		for (int ix = 0; ix < Nx; ix++)
+		{
+			rpart[ix] = 0.;
+		}
+		
 		// solve
-		solve_scheme.solve_transfer_explicitly(vel, field, field_new, dt_alpha, rpart);
+		solving_scheme.solve_transfer_explicitly(vel, field, field_new, dt_alpha, rpart);
 		
 		// save last field
 #pragma omp parallel for
@@ -103,6 +138,58 @@ int main()
 	print_field(filename, field_new);
 	
 	return 0;
+}
+
+double get_Gamma(const double alpha)
+{
+	// define alpha1 belonging between 1 and 2
+	double alpha1 = alpha - double(int(alpha)) + 1.;
+	
+	double gamma = 1.;
+	if (alpha < 1.)
+		gamma /= alpha;
+	else if (alpha > 2.)
+	{
+		double a = alpha;
+		while (a > 2.)
+		{
+			gamma *= a - 1.;
+			a -= 1.;
+		}
+	}
+	
+	// first term (sum)
+	double term1 = 0.;
+	// number of terms in first sum
+	const int n = 10;
+	// threshold for ins=tegral disecting
+	const double x0 = 2.;
+	for (int i = 0; i < n; ++i)
+	{
+		double mult = 1. / x0;
+		for (int i1 = 0; i1 < i + 1; ++i1)
+		{
+			mult *= x0 / (alpha1 + i1);
+		}
+		
+		term1 += mult;
+	}
+	term1 *= pow(x0, alpha1) * exp(-x0);
+	
+	// second term (integral)
+	double term2 = 0.;
+	// limit for integral
+	const double x_n = 20.;
+	// integral step
+	const double dx = 0.1;
+	double x = x0 + dx * 0.5;
+	while (x < x_n)
+	{
+		term2 += exp(-x) * pow(x, alpha1) / x * dx;
+		x += dx;
+	}
+	
+	return gamma * (term1 + term2);
 }
 
 void print_field(std::string filename, std::vector<double> &field)
@@ -145,6 +232,26 @@ void make_GL_coeff_vec(std::vector<double> &GL_vec, double alpha, int n)
 	
 	for(int i = 1; i < n + 1; i+=2)
 		GL_vec[i] *= -1.;
+	
+	return;
+}
+
+void get_initial_field_vector(const double dx, const int Nx, std::vector<double> &field)
+{
+	for (int ix = 0; ix < Nx; ix++)
+	{
+		field[ix] = get_initial_field(dx * ix);
+	}
+	
+	return;
+}
+
+void get_source_vector(const double time, const double dx, const int Nx, std::vector<double> &source)
+{
+	for (int ix = 0; ix < Nx; ix++)
+	{
+		source[ix] = get_source(dx * ix, time);
+	}
 	
 	return;
 }
