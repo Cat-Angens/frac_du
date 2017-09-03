@@ -90,6 +90,35 @@ void TVD_scheme::fill_F(const std::vector<double> &field, const std::vector<doub
 	return;
 }
 
+void TVD_scheme::fill_F_without_tvd(const std::vector<double> &field, const std::vector<double> &vel_edg)
+{
+#pragma omp parallel for
+	for(int ix = 0; ix < Nx; ix++)
+	{
+		for (int adj = 0; adj < 3; adj++)
+		{
+			mat_F[ix][adj] = 0;
+		}
+	}
+	
+#pragma omp parallel for
+	// расчет переноса через ребра выбранного направления
+	for(int ix = 0; ix < Nx - 1; ix++)
+	{
+		// рассматривается взаимодействие между ячейками ix и ix + 1
+		
+		double vel_xy = 0.5 * vel_edg[ix] / dx;
+		
+		//double phi_term = 0.5 * fabs(vel_xy);// *Phi[ix];
+		
+		mat_F[ix    ][2] += -vel_xy;
+		mat_F[ix + 1][0] += vel_xy;
+		
+	}
+	
+	return;
+}
+
 double TVD_scheme::tvd_limit(const double r) const
 {
 	if (r < 0)
@@ -99,9 +128,16 @@ double TVD_scheme::tvd_limit(const double r) const
 	
 }
 
-void TVD_scheme::solve_transfer_explicitly(const std::vector<double> &vel, const std::vector<double> &field_old, std::vector<double> &field_new, const double dt, const std::vector<double> &right_part)
+void TVD_scheme::solve_transfer_explicitly(
+	const std::vector<double> &vel,
+	const std::vector<double> &field_GL_derivative,
+	const std::vector<double> &field_old,
+	std::vector<double> &field_new,
+	const double dt,
+	const std::vector<double> &right_part)
 {
-	fill_F(field_old, vel);
+	//fill_F(field_old, vel);
+	fill_F_without_tvd(field_old, vel);
 	
 #ifdef printmat
 	std::ofstream output_file;
@@ -121,7 +157,7 @@ void TVD_scheme::solve_transfer_explicitly(const std::vector<double> &vel, const
 #pragma omp parallel for
 	for (int ix = 0; ix < Nx; ix++)
 	{
-		field_new[ix] = right_part[ix] * dt;
+		field_new[ix] = field_old[ix] + right_part[ix] * dt;
 		
 		for (int adj = 0; adj < 3; adj++)
 		{
@@ -129,7 +165,7 @@ void TVD_scheme::solve_transfer_explicitly(const std::vector<double> &vel, const
 			{
 				continue;
 			}
-			field_new[ix] -= dt * mat_F[ix][adj] * field_old[ix + adj - 1];
+			field_new[ix] += dt * mat_F[ix][adj] * field_GL_derivative[ix + adj - 1];
 		}
 	}
 }

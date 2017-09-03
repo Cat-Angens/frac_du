@@ -19,10 +19,23 @@ double get_source(const double x, const double time)
 {
 	return 0.;
 }
+
 double get_initial_field(const double x)
 {
 	if (x > 10. && x < 20.)
-		return 1.;
+		return 1. - (x - 15.) * (x - 15.) / 25.;
+	return 0.;
+}
+
+double get_initial_field_derivative(const double x)
+{
+	if (x > 10. && x < 20.)
+		return -2. * (x - 15.) / 25.;
+	return 0.;
+}
+
+double get_border_value(const double time)
+{
 	return 0.;
 }
 
@@ -38,16 +51,10 @@ int main()
 	double dt = 0.01;
 	double finish_time = 10.;
 	
-	const double alpha = 0.9;
-	const double gamma_alpha = 0;
+	const double alpha = 0.1;
+	const double gamma_alpha = get_Gamma(alpha);
 	
-	for (int i = 1; i < 30; ++i)
-	{
-		double alpha_i = 0.1 * i + 0.05;
-		std::cout << "Gamma(" << alpha_i << ") = " << get_Gamma(alpha_i) << std::endl;
-	}
-	return 0.;
-	// frac
+	// memory effects variables
 	double t_len = 5.;
 	int    time_layers_cnt = std::max(2, int(t_len / dt)); // minimum 2 layers - current and previous
 	std::vector<std::vector<double>> timelayer_fields(time_layers_cnt, std::vector<double>(Nx, 0.));
@@ -57,8 +64,14 @@ int main()
 	std::vector<double> vel(Nx - 1, 2.);
 	std::vector<double> field(Nx, 0.);
 	std::vector<double> field_new(Nx, 0.);
+	std::vector<double> reconstructed_field(Nx, 0.);
 	std::vector<double> time_deriv_GL_field(Nx, 0.);
 	std::vector<double> sources(Nx, 0.);
+	std::vector<double> dphi_dx(Nx);
+	for (int ix = 0; ix < Nx; ++ix)
+	{
+		dphi_dx[ix] = get_initial_field_derivative(dx * ix);
+	}
 	
 	// initial field values: w === 0 initally!
 	//get_initial_field_vector(dx, Nx, field);
@@ -73,9 +86,9 @@ int main()
 	
 	// Grunwald-Letnikov derivative coefficients
 	std::vector<double> GL_coeffs;
-	make_GL_coeff_vec(GL_coeffs, alpha, time_layers_cnt);
+	make_GL_coeff_vec(GL_coeffs, 1 - alpha, time_layers_cnt);
 	print_field(std::string("GL_coeffs.txt"), GL_coeffs);
-	double dt_alpha = pow(dt, alpha);
+	double dt_alpha = pow(dt, 1 - alpha);
 	
 	// right-hand part (source and fractional time derivative)
 	std::vector<double> rpart(Nx, 0.);
@@ -83,15 +96,10 @@ int main()
 	// time cycle
 	while(time < finish_time)
 	{
-#pragma omp parallel for
-		for (int ix = 0; ix < Nx; ix++)
-		{
-			rpart[ix] = 0.;
-		}
 		const int N_calc_time_layers = std::min(time_layers_cnt, it + 1);
 		
 		// fill fractional time derivatives
-#pragma omp parallel for
+//#pragma omp parallel for
 		for(int ix = 0; ix < Nx; ix++)
 		{
 			time_deriv_GL_field[ix] = 0.;
@@ -105,37 +113,59 @@ int main()
 		get_source_vector(time, dx, Nx, sources);
 		
 		// fill right part
-#pragma omp parallel for
+//#pragma omp parallel for
 		for (int ix = 0; ix < Nx; ix++)
 		{
-			rpart[ix] = 0.;
+			rpart[ix] = sources[ix] - dphi_dx[ix] * pow(time + dt * 0.5, alpha - 1.) / gamma_alpha;
 		}
 		
 		// solve
-		solving_scheme.solve_transfer_explicitly(vel, field, field_new, dt_alpha, rpart);
+		solving_scheme.solve_transfer_explicitly(vel, time_deriv_GL_field, field, field_new, dt_alpha, rpart);
 		
 		// save last field
-#pragma omp parallel for
+//#pragma omp parallel for
 		for (int ix = 0; ix < Nx; ix++)
 		{
 			timelayer_fields[it % time_layers_cnt][ix] = field_new[ix];
 			field[ix] = field_new[ix];
 		}
 		
-		// time counters ++
-		time += dt;
-		it++;
-		std::cout << "Calculated " << time << " secs" << std::endl;
+		// reconstruction field
+		// fill fractional time derivatives
+//#pragma omp parallel for
+		for (int ix = 0; ix < Nx; ix++)
+		{
+			time_deriv_GL_field[ix] = 0.;
+			for (int time_layer = 1; time_layer < N_calc_time_layers; time_layer++)
+			{
+				time_deriv_GL_field[ix] += timelayer_fields[(it - time_layer) % time_layers_cnt][ix] * GL_coeffs[time_layer] / dt_alpha;
+			}
+		}
+		for (int ix = 0; ix < Nx; ++ix)
+		{
+			reconstructed_field[ix] = time_deriv_GL_field[ix] + get_initial_field(dx * ix) * pow(time + dt, alpha - 1.) / gamma_alpha;
+		}
 		
 		// file print
 		std::ostringstream stringStream;
 		stringStream << "field_" << std::setfill('0') << std::setw(int(log10(finish_time / dt)) + 1) << it << ".txt";
-		print_field(stringStream.str(), field_new);
+		print_field(stringStream.str(), reconstructed_field);
+		std::ostringstream stringStream2;
+		stringStream2 << "rpart_" << std::setfill('0') << std::setw(int(log10(finish_time / dt)) + 1) << it << ".txt";
+		print_field(stringStream2.str(), rpart);
+		std::ostringstream stringStream3;
+		stringStream3 << "rpart_" << std::setfill('0') << std::setw(int(log10(finish_time / dt)) + 1) << it << ".txt";
+		print_field(stringStream3.str(), sources);
+		
+		// time counters ++
+		time += dt;
+		it++;
+		std::cout << "Calculated " << time << " secs" << std::endl;
 	}
 	
 	// print final result
 	std::string filename("out.txt");
-	print_field(filename, field_new);
+	print_field(filename, reconstructed_field);
 	
 	return 0;
 }
