@@ -6,8 +6,10 @@ TVD_scheme::TVD_scheme(int nx, double dx)
 	: Nx(nx),
 	dx(dx)
 {
-	mat_F.resize(Nx, std::vector<double>(3, 0.));
 	Phi.resize(Nx - 1, 0.);
+	mat_F.resize(Nx, std::vector<double>(3, 0.));
+	mat_full.resize(Nx, std::vector<double>(3, 0.));
+	right_part_modified.resize(Nx, 0.);
 }
 
 double TVD_scheme::get_r_i_biased(const std::vector<double> &field, const std::vector<double> &vel_edg, int ix) const
@@ -71,19 +73,19 @@ void TVD_scheme::fill_F(const std::vector<double> &field, const std::vector<doub
 		
 		if(vel_xy < 0)
 		{
-			mat_F[ix    ][1] += - phi_term;
-			mat_F[ix    ][2] +=   phi_term + vel_xy;
+			mat_F[ix    ][1] -= - phi_term;
+			mat_F[ix    ][2] -=   phi_term + vel_xy;
 			
-			mat_F[ix + 1][0] +=   phi_term;
-			mat_F[ix + 1][1] += - phi_term - vel_xy;
+			mat_F[ix + 1][0] -=   phi_term;
+			mat_F[ix + 1][1] -= - phi_term - vel_xy;
 		}
 		else
 		{
-			mat_F[ix    ][1] += - phi_term + vel_xy;
-			mat_F[ix    ][2] +=   phi_term;
+			mat_F[ix    ][1] -= - phi_term + vel_xy;
+			mat_F[ix    ][2] -=   phi_term;
 			
-			mat_F[ix + 1][0] +=   phi_term - vel_xy;
-			mat_F[ix + 1][1] += - phi_term;
+			mat_F[ix + 1][0] -=   phi_term - vel_xy;
+			mat_F[ix + 1][1] -= - phi_term;
 		}
 	}
 	
@@ -101,19 +103,24 @@ void TVD_scheme::fill_F_without_tvd(const std::vector<double> &field, const std:
 		}
 	}
 	
-#pragma omp parallel for
+	// ix == 0      <-> ix == 1
+	mat_F[0][2] = 0.;
+	mat_F[1][0] -= vel_edg[0] / dx;
+	
+	// ix == Nx - 2 <-> ix == Nx - 1
+	mat_F[Nx - 2][2] += vel_edg[Nx - 2] / dx;
+	mat_F[Nx - 1][0] -= vel_edg[Nx - 2] / dx;
+	
 	// расчет переноса через ребра выбранного направления
-	for(int ix = 0; ix < Nx - 1; ix++)
+#pragma omp parallel for
+	for(int ix = 1; ix < Nx - 2; ix++)
 	{
 		// рассматривается взаимодействие между ячейками ix и ix + 1
 		
 		double vel_xy = 0.5 * vel_edg[ix] / dx;
 		
-		//double phi_term = 0.5 * fabs(vel_xy);// *Phi[ix];
-		
-		mat_F[ix    ][2] += -vel_xy;
-		mat_F[ix + 1][0] += vel_xy;
-		
+		mat_F[ix    ][2] += vel_xy;
+		mat_F[ix + 1][0] -= vel_xy;
 	}
 	
 	return;
@@ -154,20 +161,20 @@ void TVD_scheme::solve_transfer_explicitly(
 	output_file << "################ FINISHED F ################" << std::endl << std::endl;
 #endif
 	
-#pragma omp parallel for
-	for (int ix = 0; ix < Nx; ix++)
-	{
-		field_new[ix] = field_old[ix] + right_part[ix] * dt;
-		
-		for (int adj = 0; adj < 3; adj++)
-		{
-			if ((ix == 0 && adj == 0) || (ix == Nx - 1 && adj == 2))
-			{
-				continue;
-			}
-			field_new[ix] += dt * mat_F[ix][adj] * field_GL_derivative[ix + adj - 1];
-		}
-	}
+//#pragma omp parallel for
+//	for (int ix = 0; ix < Nx; ix++)
+//	{
+//		field_new[ix] = field_old[ix] + right_part[ix] * dt;
+//		
+//		for (int adj = 0; adj < 3; adj++)
+//		{
+//			if ((ix == 0 && adj == 0) || (ix == Nx - 1 && adj == 2))
+//			{
+//				continue;
+//			}
+//			field_new[ix] -= dt * mat_F[ix][adj] * field_GL_derivative[ix + adj - 1];
+//		}
+//	}
 }
 
 void TVD_scheme::fill_Phi(const std::vector<double> &field, const std::vector<double> &vel_edg)

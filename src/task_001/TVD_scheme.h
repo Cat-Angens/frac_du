@@ -13,7 +13,9 @@ class TVD_scheme
 	const double dx;
 	
 	std::vector<double>  Phi;
-	std::vector<std::vector<double>>  mat_F;     // 3-диагональная матрица
+	std::vector<std::vector<double>>  mat_F;        // 3-диагональная матрица
+	std::vector<std::vector<double>>  mat_full;     // 3-диагональная матрица
+	std::vector<double>               right_part_modified; // вектор правой части с поправками из-за граничных условий
 	
 	double get_r_i_biased(const std::vector<double> &field, const std::vector<double> &vel_edg, int ix) const;
 	void fill_F(const std::vector<double> &field, const std::vector<double> &vel_edg);
