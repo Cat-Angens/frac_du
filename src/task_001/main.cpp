@@ -61,21 +61,21 @@ int main()
 	std::vector<std::vector<double>> timelayer_fields(time_layers_cnt, std::vector<double>(Nx, 0.));
 	std::cout << "Time memory " << t_len << " secs (" << time_layers_cnt << " time steps)" << std::endl;
 	
-	//test Thomas method
-	// matrix 5x5
-	std::vector<std::vector<double>> matrix(3, std::vector<double>());
-	matrix[0] = {1., 7., 1., 1.};
-	matrix[1] = {4., 2., 2., 1., 1.};
-	matrix[2] = {3., 1., 1., 2.};
-	std::vector<double> right_part = {10., 8., 24., 17., 9.};
-	std::vector<double> solution(5, 0.);
-	mat_solve_Thomas solver(5);
-	solver.solve(matrix, right_part, solution);
-	
-	std::cout << "Solution:\n";
-	for (auto &elem : solution)
-		std::cout << elem << std::endl;
-	return 0;
+	////test Thomas method
+	//// matrix 5x5
+	//std::vector<std::vector<double>> matrix(3, std::vector<double>());
+	//matrix[0] = {1., 7., 1., 1.};
+	//matrix[1] = {4., 2., 2., 1., 1.};
+	//matrix[2] = {3., 1., 1., 2.};
+	//std::vector<double> right_part = {10., 8., 24., 17., 9.};
+	//std::vector<double> solution(5, 0.);
+	//mat_solve_Thomas solver(5);
+	//solver.solve(matrix, right_part, solution);
+	//
+	//std::cout << "Solution:\n";
+	//for (auto &elem : solution)
+	//	std::cout << elem << std::endl;
+	//return 0;
 	
 	// fields
 	std::vector<double> vel(Nx - 1, 2.);
@@ -135,6 +135,7 @@ int main()
 		{
 			rpart[ix] = sources[ix] - dphi_dx[ix] * pow(time + dt * 0.5, alpha - 1.) / gamma_alpha;
 		}
+		rpart[0] -= vel[0] * (get_border_value(time + dt) - get_initial_field(0.) * pow(time + dt, alpha - 1.) / gamma_alpha;
 		
 		// solve
 		solving_scheme.solve_transfer_explicitly(vel, time_deriv_GL_field, field, field_new, dt_alpha, rpart);
