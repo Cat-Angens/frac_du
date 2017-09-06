@@ -21,9 +21,15 @@
     <ClCompile Include="TVD_scheme.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="mat_solve_Thomas.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="TVD_scheme.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="mat_solve_Thomas.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
