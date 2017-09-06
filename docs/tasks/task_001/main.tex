@@ -1,0 +1,46 @@
+% -----------------------------
+% Корневой файл (компиляция с него)
+% -----------------------------
+
+\documentclass[12pt, russian, indentheadings]{report}
+
+%\input{package_conf.tex}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{amsmath, amssymb}
+\usepackage{graphics}
+\usepackage{graphicx}
+\usepackage{tabularx}
+
+
+\begin{document}
+%\selectlanguage{russian}
+
+%\renewcommand{\captionlabeldelim}{~---}
+\renewcommand{\labelitemi}{---}
+\renewcommand{\labelitemii}{---}
+\renewcommand{\labelitemiii}{---}
+\renewcommand{\figurename}{Рисунок}
+\renewcommand\thefigure{\Alph{part}.\arabic{chapter}.\arabic{figure}}
+\renewcommand\thetable{\Alph{part}.\arabic{chapter}.\arabic{table}}
+\frenchspacing
+
+\title{Задача дробного переноса}
+
+%\tableofcontents
+
+\chapter{Постановка задачи}
+\input{definition.tex}
+
+%\chapter{Аналитическое решение}
+%\input{analytical_solution.tex}
+
+\chapter{Численное решение}
+\input{numerical_solution.tex}
+
+%\begin{thebibliography}{99}
+%	\addcontentsline{toc}{chapter}{Список литературы}
+%	\input{bib.tex}
+%\end{thebibliography}
+
+\end{document}

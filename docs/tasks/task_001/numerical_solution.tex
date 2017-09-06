@@ -1,0 +1,98 @@
+\section{Преобразования системы}
+Численный расчет исзодного уравнения проблематичен, так как в момент $t=0$ в уравнении присутствует интегрируемая особенность (сингулярность). Поэтому производятся преобразование:
+\begin{equation}
+	w = J^{1-\alpha}_t c - \phi(x),
+\end{equation}
+\begin{equation}
+	c = D^{1-\alpha}_t \left( w + \phi(x) \right)
+	= D^{1-\alpha}_t w + \phi(x) \frac{t^{\alpha - 1}}{\Gamma(\alpha)}
+\end{equation}
+
+
+Тогда система принимает вид
+
+\begin{equation}
+	\begin{cases}
+		w_t + u \left( D^{1-\alpha}_t \left( w + \phi\left(x\right) \right) \right)_x = f(x,t)\\
+		\left.w\right|_{t=0} = 0\\
+		\left.D^{1-\alpha}_t \left( w + \phi(x) \right) \right|_{x=0} = \psi(t)
+%		= \psi(t) - \phi(0) \frac{t^{\alpha - 1}}{\Gamma(\alpha)}
+	\end{cases}
+\end{equation}
+или
+\begin{equation}
+	\label{eq:num1}
+	\begin{cases}
+		w_t + u \left( D^{1-\alpha}_t w\right)_x
+		= f(x,t) - \phi_x\left(x\right)\frac{t^{\alpha - 1}}{\Gamma(\alpha)}\\
+		\left.w\right|_{t=0} = 0\\
+		\left.D^{1-\alpha}_t w \right|_{x=0}
+		= \psi(t) - \phi(0) \frac{t^{\alpha - 1}}{\Gamma(\alpha)}
+	\end{cases}
+\end{equation}
+
+\section{Численная схема}
+На текущий момент реализована неявная численная схема второго порядка точности по пространству.
+
+Далее временные слои обзначены верхним индексом $n$, $n=0,1,...$, где $n=0$ соответствует начальному состоянию системы. Пространственные координаты обозначены через нижний индекс $i$, $i=\overline{0,nx}$, где $i=0$ соответствует левой границе расчетной области, $i=nx$ --- правой.
+
+Обозначим $\tilde{w}^n_i = \left.D^{1-\alpha}_t w \right|_{t=t^n}$ --- вычисленная на временном шаге $n$ в точке $i$ производная Римана-Лиувилля поля $w$ по времени.
+
+Тогда схема выглядит следующим образом
+\begin{equation}
+	\label{eq:num2}
+	\frac{w^{n+1}_{0} - w^{n}_{0}}{\Delta t}
+	+ u_i
+	\frac
+		{\tilde{w}_1^{n+1} -
+			\left( \psi^{n+1} - \phi_0
+			\frac
+				{\left(t^{n+1}\right)^{\alpha - 1}}
+				{\Gamma(\alpha)}
+			\right)
+		}
+		{\Delta x} 
+	= f_0^{n+1} - \phi'_0\frac{\left(t^n\right)^{\alpha - 1}}{\Gamma(\alpha)},
+\end{equation}
+
+\begin{equation}
+	\label{eq:num3}
+	\frac{w^{n+1}_{i} - w^{n}_{i}}{\Delta t}
+	+ u_i \frac{
+		\tilde{w}^{n+1}_{i+1} -
+		\tilde{w}^{n+1}_{i-1} }
+	{2 \Delta x}
+	= f_i^{n+1} - \phi'_{i}\frac{\left(t^n\right)^{\alpha - 1}}{\Gamma(\alpha)},
+	i=\overline{1,nx-1}
+\end{equation}
+
+\begin{equation}
+	\label{eq:num4}
+	\frac{w^{n+1}_{nx} - w^{n}_{nx}}{\Delta t}
+	+ u_i \frac{
+		\tilde{w}^{n+1}_{nx} -
+		\tilde{w}^{n+1}_{nx-1} }
+	{\Delta x}
+	= f_{nx}^{n+1} - \phi'_{nx}\frac{\left(t^n\right)^{\alpha - 1}}{\Gamma(\alpha)},
+\end{equation}
+
+Вычисление $\tilde{w}^n_i$ производится с использованием приближения Грюнвальда-Летникова
+\begin{equation}
+	\label{eq:num5}
+	\tilde{w}^{n+1}_i
+	= \sum_{k=0}^{\min (m,n+1)}
+	\frac{(-1)^k}{\Delta t^\alpha} \begin{pmatrix}\alpha \\ k \end{pmatrix}
+	= \frac{w^{n+1}_{i}}{\Delta t^\alpha}
+	+ \sum_{k=1}^{\min (m,n+1)}
+	\frac{(-1)^k}{\Delta t^\alpha} \begin{pmatrix}\alpha \\ k \end{pmatrix}
+	w^{n+1-k}_{i},
+\end{equation}
+где $m$ --- параметр <<длины памяти>>, определяющий количество слагаемых в приближении.
+
+Таким образом общий алгоритм на временном шаге $n+1$:
+
+\begin{enumerate}
+	\item Расчет правых частей уравнений \ref{eq:num2}-\ref{eq:num4}
+%	\item Расчет дробных производных по времени $\tilde{w}^n_i, i=\overline{1,...,nx}$ согласно \ref{eq:num5}.
+%	\item Переход на новый временной шаг согласно \ref{eq:num2}-\ref{eq:num4}.
+\end{enumerate}
