@@ -63,8 +63,8 @@ void mat_solve_Thomas::solve(
 		assert(false);
 	}
 	
-	assert(right_part.size() >= mat[0].size() + 1);
-	assert(solution.size() >= mat[0].size() + 1);
+	assert(right_part.size() >= mat[1].size());
+	assert(solution.size() >= mat[1].size());
 	
 	size_t size = mat[1].size();
 	std::vector<double> c(size);
@@ -77,18 +77,18 @@ void mat_solve_Thomas::solve(
 		size_t i0, i2;
 		if (equal_diag_lens)
 		{
-			i0 = i + 1;
+			i0 = i;
 			i2 = i;
 		}
 		else
 		{
-			i0 = i;
+			i0 = i - 1;
 			i2 = i;
 		}
 		
 		double denominator = mat[1][i] - mat[0][i0] * c[i - 1];
 		if (i != size - 1)
-			c[i] = mat[2][i] / denominator;
+			c[i] = mat[2][i2] / denominator;
 		d[i] = (right_part[i] - mat[0][i0] * d[i - 1]) / denominator;
 	}
 	
