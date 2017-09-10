@@ -64,9 +64,9 @@ int main()
 	////test Thomas method
 	//// matrix 5x5
 	//std::vector<std::vector<double>> matrix(3, std::vector<double>());
-	//matrix[0] = {1., 7., 1., 1.};
+	//matrix[0] = {0., 1., 7., 1., 1.};
 	//matrix[1] = {4., 2., 2., 1., 1.};
-	//matrix[2] = {3., 1., 1., 2.};
+	//matrix[2] = {3., 1., 1., 2., 0.};
 	//std::vector<double> right_part = {10., 8., 24., 17., 9.};
 	//std::vector<double> solution(5, 0.);
 	//mat_solve_Thomas solver(5);
@@ -115,7 +115,7 @@ int main()
 	{
 		const int N_calc_time_layers = std::min(time_layers_cnt, it + 1);
 		
-		// fill fractional time derivatives
+		// fill fractional time derivatives without first term
 //#pragma omp parallel for
 		for(int ix = 0; ix < Nx; ix++)
 		{
@@ -130,15 +130,19 @@ int main()
 		get_source_vector(time, dx, Nx, sources);
 		
 		// fill right part
+		// sources
 //#pragma omp parallel for
 		for (int ix = 0; ix < Nx; ix++)
 		{
 			rpart[ix] = sources[ix] - dphi_dx[ix] * pow(time + dt * 0.5, alpha - 1.) / gamma_alpha;
 		}
-		rpart[0] -= vel[0] * (get_border_value(time + dt) - get_initial_field(0.) * pow(time + dt, alpha - 1.) / gamma_alpha;
+		// convection part for border
+		double time_deriv_GL_border = vel[0] / pow(dt, alpha)
+			* (get_border_value(time + dt) - get_initial_field(0.) * pow(time + dt, alpha - 1.) / gamma_alpha);
+		
 		
 		// solve
-		solving_scheme.solve_transfer_explicitly(vel, time_deriv_GL_field, field, field_new, dt_alpha, rpart);
+		solving_scheme.solve_transfer_explicitly(vel, time_deriv_GL_field, time_deriv_GL_border, field, field_new, dt, alpha, rpart);
 		
 		// save last field
 //#pragma omp parallel for

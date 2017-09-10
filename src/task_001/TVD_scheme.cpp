@@ -8,8 +8,10 @@ TVD_scheme::TVD_scheme(int nx, double dx)
 {
 	Phi.resize(Nx - 1, 0.);
 	mat_F.resize(Nx, std::vector<double>(3, 0.));
-	mat_full.resize(Nx, std::vector<double>(3, 0.));
-	right_part_modified.resize(Nx, 0.);
+	mat_full.resize(3, std::vector<double>(Nx, 0.));
+	right_part.resize(Nx, 0.);
+	
+	solver = new mat_solve_Thomas(Nx);
 }
 
 double TVD_scheme::get_r_i_biased(const std::vector<double> &field, const std::vector<double> &vel_edg, int ix) const
@@ -126,6 +128,32 @@ void TVD_scheme::fill_F_without_tvd(const std::vector<double> &field, const std:
 	return;
 }
 
+void TVD_scheme::fill_rpart(const std::vector<double>& field_GL_derivative, const std::vector<double>& sources, const double GL_derivative_border)
+{
+	for (int ix = 1; ix < Nx - 1; ix++)
+	{
+		right_part[ix] = sources[ix];
+		for (int adj = 0; adj < 3; ++adj)
+		{
+			right_part[ix] -= mat_F[ix][adj] * field_GL_derivative[ix - 1 + adj];
+		}
+	}
+	right_part[0] += GL_derivative_border;
+}
+
+void TVD_scheme::fill_full_matrix(const double dt_1malpha)
+{
+	for (int ix = 0; ix < Nx; ix++)
+	{
+		for (int adj = 0; adj < 3; adj++)
+		{
+			mat_full[adj][ix] = dt_1malpha * mat_F[ix][adj];
+			if (adj == 1)
+				mat_full[adj][ix] += 1.;
+		}
+	}
+}
+
 double TVD_scheme::tvd_limit(const double r) const
 {
 	if (r < 0)
@@ -138,13 +166,18 @@ double TVD_scheme::tvd_limit(const double r) const
 void TVD_scheme::solve_transfer_explicitly(
 	const std::vector<double> &vel,
 	const std::vector<double> &field_GL_derivative,
-	const std::vector<double> &field_old,
-	std::vector<double> &field_new,
+	const double GL_derivative_border,
+	const std::vector<double> & field_old,
+	std::vector<double> & field_new,
 	const double dt,
-	const std::vector<double> &right_part)
+	const double alpha,
+	const std::vector<double> & sources)
 {
+	double dt_1malpha = pow(dt, 1 - alpha);
 	//fill_F(field_old, vel);
 	fill_F_without_tvd(field_old, vel);
+	fill_rpart(field_GL_derivative, sources, GL_derivative_border);
+	fill_full_matrix(dt_1malpha);
 	
 #ifdef printmat
 	std::ofstream output_file;
@@ -161,10 +194,11 @@ void TVD_scheme::solve_transfer_explicitly(
 	output_file << "################ FINISHED F ################" << std::endl << std::endl;
 #endif
 	
+	solver->solve(mat_full, right_part, field_new);
 //#pragma omp parallel for
 //	for (int ix = 0; ix < Nx; ix++)
 //	{
-//		field_new[ix] = field_old[ix] + right_part[ix] * dt;
+//		field_new[ix] = field_old[ix] + sources[ix] * dt;
 //		
 //		for (int adj = 0; adj < 3; adj++)
 //		{
