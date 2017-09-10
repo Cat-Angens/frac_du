@@ -91,8 +91,34 @@
 
 Таким образом общий алгоритм на временном шаге $n+1$:
 
-\begin{enumerate}
-	\item Расчет правых частей уравнений \ref{eq:num2}-\ref{eq:num4}
+%\begin{enumerate}
+%	\item Расчет правых частей уравнений \ref{eq:num2}-\ref{eq:num4}
 %	\item Расчет дробных производных по времени $\tilde{w}^n_i, i=\overline{1,...,nx}$ согласно \ref{eq:num5}.
 %	\item Переход на новый временной шаг согласно \ref{eq:num2}-\ref{eq:num4}.
-\end{enumerate}
+%	\item
+
+%\end{enumerate}
+
+\begin{equation}
+	\begin{split}
+		w_i^{n+1} + \Delta t^{1- \alpha} u_{i} \frac{w_{i+1}^{n+1} - w_{i-1}^{n+1}}{2 \Delta x}
+		&= \Delta t
+		\left(
+			w_i^{n} + f_i^{n+1} - \phi'_{i}\frac{\left(t^n\right)^{\alpha - 1}}{\Gamma(\alpha)}
+		\right.\\
+			&- \frac{u_i}{2 \Delta x}
+			\sum_{k=1}^{\min (m,n+1)}
+			\frac{(-1)^k}{\Delta t^\alpha} \begin{pmatrix}\alpha \\ k \end{pmatrix}
+			w^{n+1-k}_{i+1}\\
+		&\left.
+			+ \frac{u_i}{2 \Delta x}
+			\sum_{k=1}^{\min (m,n+1)}
+			\frac{(-1)^k}{\Delta t^\alpha} \begin{pmatrix}\alpha \\ k \end{pmatrix}
+			w^{n+1-k}_{i-1}
+		\right)
+	\end{split}
+\end{equation}
+с заменой соответствующих слагаемых для граничных элементов.
+
+Полученная матрица системы является трехдиагональной и решается методом прогонки
+
