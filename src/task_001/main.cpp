@@ -16,11 +16,13 @@ void add_field_time(std::vector<std::vector<double>> &timelayer_fields, std::vec
 
 void make_GL_coeff_vec(std::vector<double> &GL_vec, double alpha, int n);
 
+// f(x, t)
 double get_source(const double x, const double time)
 {
 	return 0.;
 }
 
+// phi(x)
 double get_initial_field(const double x)
 {
 	if (x > 10. && x < 20.)
@@ -28,6 +30,7 @@ double get_initial_field(const double x)
 	return 0.;
 }
 
+// phi'(x)
 double get_initial_field_derivative(const double x)
 {
 	if (x > 10. && x < 20.)
@@ -35,6 +38,7 @@ double get_initial_field_derivative(const double x)
 	return 0.;
 }
 
+// psi(t)
 double get_border_value(const double time)
 {
 	return 0.;
@@ -52,7 +56,7 @@ int main()
 	double dt = 0.01;
 	double finish_time = 10.;
 	
-	const double alpha = 0.1;
+	const double alpha = 0.99;
 	const double gamma_alpha = get_Gamma(alpha);
 	
 	// memory effects variables
@@ -134,7 +138,8 @@ int main()
 //#pragma omp parallel for
 		for (int ix = 0; ix < Nx; ix++)
 		{
-			rpart[ix] = sources[ix] - dphi_dx[ix] * pow(time + dt * 0.5, alpha - 1.) / gamma_alpha;
+			// TODO vel[0] --> vel[ix]
+			rpart[ix] = sources[ix] - vel[0] * dphi_dx[ix] * pow(time + dt, alpha - 1.) / gamma_alpha;
 		}
 		// convection part for border
 		double time_deriv_GL_border = vel[0] / pow(dt, alpha)
@@ -142,7 +147,7 @@ int main()
 		
 		
 		// solve
-		solving_scheme.solve_transfer_explicitly(vel, time_deriv_GL_field, time_deriv_GL_border, field, field_new, dt, alpha, rpart);
+		solving_scheme.solve_transfer_explicitly(vel, time_deriv_GL_field, time_deriv_GL_border, field, field_new, dt, alpha, rpart, it);
 		
 		// save last field
 //#pragma omp parallel for
@@ -158,13 +163,15 @@ int main()
 		for (int ix = 0; ix < Nx; ix++)
 		{
 			time_deriv_GL_field[ix] = 0.;
-			for (int time_layer = 1; time_layer < N_calc_time_layers; time_layer++)
+			for (int time_layer = 0; time_layer < N_calc_time_layers; time_layer++)
 			{
 				time_deriv_GL_field[ix] += timelayer_fields[(it - time_layer) % time_layers_cnt][ix] * GL_coeffs[time_layer] / dt_alpha;
 			}
 		}
+		std::vector<double> reconstruction_secondpart(Nx, 0.);
 		for (int ix = 0; ix < Nx; ++ix)
 		{
+			reconstruction_secondpart[ix] = get_initial_field(dx * ix) * pow(time + dt, alpha - 1.) / gamma_alpha;
 			reconstructed_field[ix] = time_deriv_GL_field[ix] + get_initial_field(dx * ix) * pow(time + dt, alpha - 1.) / gamma_alpha;
 		}
 		
@@ -172,12 +179,13 @@ int main()
 		std::ostringstream stringStream;
 		stringStream << "field_" << std::setfill('0') << std::setw(int(log10(finish_time / dt)) + 1) << it << ".txt";
 		print_field(stringStream.str(), reconstructed_field);
+		std::ostringstream stringStream1;
+		stringStream1 << "GLfield_" << std::setfill('0') << std::setw(int(log10(finish_time / dt)) + 1) << it << ".txt";
+		print_field(stringStream1.str(), time_deriv_GL_field);
 		std::ostringstream stringStream2;
-		stringStream2 << "rpart_" << std::setfill('0') << std::setw(int(log10(finish_time / dt)) + 1) << it << ".txt";
-		print_field(stringStream2.str(), rpart);
-		std::ostringstream stringStream3;
-		stringStream3 << "rpart_" << std::setfill('0') << std::setw(int(log10(finish_time / dt)) + 1) << it << ".txt";
-		print_field(stringStream3.str(), sources);
+		stringStream2 << "rec2_" << std::setfill('0') << std::setw(int(log10(finish_time / dt)) + 1) << it << ".txt";
+		print_field(stringStream2.str(), reconstruction_secondpart);
+
 		
 		// time counters ++
 		time += dt;
@@ -253,6 +261,8 @@ void print_field(std::string filename, std::vector<double> &field)
 	{
 		output_file << data << std::endl;
 	}
+	
+	output_file.close();
 	
 	return;
 }
