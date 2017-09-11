@@ -24,7 +24,7 @@
 	\label{eq:num1}
 	\begin{cases}
 		w_t + u \left( D^{1-\alpha}_t w\right)_x
-		= f(x,t) - \phi_x\left(x\right)\frac{t^{\alpha - 1}}{\Gamma(\alpha)}\\
+		= f(x,t) - u \phi_x\left(x\right)\frac{t^{\alpha - 1}}{\Gamma(\alpha)}\\
 		\left.w\right|_{t=0} = 0\\
 		\left.D^{1-\alpha}_t w \right|_{x=0}
 		= \psi(t) - \phi(0) \frac{t^{\alpha - 1}}{\Gamma(\alpha)}
@@ -42,7 +42,7 @@
 \begin{equation}
 	\label{eq:num2}
 	\frac{w^{n+1}_{0} - w^{n}_{0}}{\Delta t}
-	+ u_i
+	+ u
 	\frac
 		{\tilde{w}_1^{n+1} -
 			\left( \psi^{n+1} - \phi_0
@@ -52,28 +52,28 @@
 			\right)
 		}
 		{\Delta x} 
-	= f_0^{n+1} - \phi'_0\frac{\left(t^n\right)^{\alpha - 1}}{\Gamma(\alpha)},
+	= f_0^{n+1} - u \phi'_0\frac{\left(t^n\right)^{\alpha - 1}}{\Gamma(\alpha)},
 \end{equation}
 
 \begin{equation}
 	\label{eq:num3}
 	\frac{w^{n+1}_{i} - w^{n}_{i}}{\Delta t}
-	+ u_i \frac{
+	+ u \frac{
 		\tilde{w}^{n+1}_{i+1} -
 		\tilde{w}^{n+1}_{i-1} }
 	{2 \Delta x}
-	= f_i^{n+1} - \phi'_{i}\frac{\left(t^n\right)^{\alpha - 1}}{\Gamma(\alpha)},
+	= f_i^{n+1} - u \phi'_{i}\frac{\left(t^n\right)^{\alpha - 1}}{\Gamma(\alpha)},
 	i=\overline{1,nx-1}
 \end{equation}
 
 \begin{equation}
 	\label{eq:num4}
 	\frac{w^{n+1}_{nx} - w^{n}_{nx}}{\Delta t}
-	+ u_i \frac{
+	+ u \frac{
 		\tilde{w}^{n+1}_{nx} -
 		\tilde{w}^{n+1}_{nx-1} }
 	{\Delta x}
-	= f_{nx}^{n+1} - \phi'_{nx}\frac{\left(t^n\right)^{\alpha - 1}}{\Gamma(\alpha)},
+	= f_{nx}^{n+1} - u \phi'_{nx}\frac{\left(t^n\right)^{\alpha - 1}}{\Gamma(\alpha)},
 \end{equation}
 
 Вычисление $\tilde{w}^n_i$ производится с использованием приближения Грюнвальда-Летникова
@@ -82,6 +82,7 @@
 	\tilde{w}^{n+1}_i
 	= \sum_{k=0}^{\min (m,n+1)}
 	\frac{(-1)^k}{\Delta t^\alpha} \begin{pmatrix}\alpha \\ k \end{pmatrix}
+	w^{n+1-k}_{i}
 	= \frac{w^{n+1}_{i}}{\Delta t^\alpha}
 	+ \sum_{k=1}^{\min (m,n+1)}
 	\frac{(-1)^k}{\Delta t^\alpha} \begin{pmatrix}\alpha \\ k \end{pmatrix}
@@ -89,7 +90,7 @@
 \end{equation}
 где $m$ --- параметр <<длины памяти>>, определяющий количество слагаемых в приближении.
 
-Таким образом общий алгоритм на временном шаге $n+1$:
+Таким образом, общий алгоритм на временном шаге $n+1$:
 
 %\begin{enumerate}
 %	\item Расчет правых частей уравнений \ref{eq:num2}-\ref{eq:num4}
@@ -101,17 +102,17 @@
 
 \begin{equation}
 	\begin{split}
-		w_i^{n+1} + \Delta t^{1- \alpha} u_{i} \frac{w_{i+1}^{n+1} - w_{i-1}^{n+1}}{2 \Delta x}
-		&= \Delta t
+		w_i^{n+1} + \Delta t^{1- \alpha} u \frac{w_{i+1}^{n+1} - w_{i-1}^{n+1}}{2 \Delta x}
+		&= w_i^{n} + \Delta t
 		\left(
-			w_i^{n} + f_i^{n+1} - \phi'_{i}\frac{\left(t^n\right)^{\alpha - 1}}{\Gamma(\alpha)}
+			f_i^{n+1} - u \phi'_{i}\frac{\left(t^n\right)^{\alpha - 1}}{\Gamma(\alpha)}
 		\right.\\
-			&- \frac{u_i}{2 \Delta x}
+			&- \frac{u}{2 \Delta x}
 			\sum_{k=1}^{\min (m,n+1)}
 			\frac{(-1)^k}{\Delta t^\alpha} \begin{pmatrix}\alpha \\ k \end{pmatrix}
 			w^{n+1-k}_{i+1}\\
 		&\left.
-			+ \frac{u_i}{2 \Delta x}
+			+ \frac{u}{2 \Delta x}
 			\sum_{k=1}^{\min (m,n+1)}
 			\frac{(-1)^k}{\Delta t^\alpha} \begin{pmatrix}\alpha \\ k \end{pmatrix}
 			w^{n+1-k}_{i-1}
