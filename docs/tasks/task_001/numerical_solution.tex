@@ -81,11 +81,11 @@
 	\label{eq:num5}
 	\tilde{w}^{n+1}_i
 	= \sum_{k=0}^{\min (m,n+1)}
-	\frac{(-1)^k}{\Delta t^\alpha} \begin{pmatrix}\alpha \\ k \end{pmatrix}
+	\frac{(-1)^k}{\Delta t^{1-\alpha}} \begin{pmatrix} 1 - \alpha \\ k \end{pmatrix}
 	w^{n+1-k}_{i}
-	= \frac{w^{n+1}_{i}}{\Delta t^\alpha}
+	= \frac{w^{n+1}_{i}}{\Delta t^{1-\alpha}}
 	+ \sum_{k=1}^{\min (m,n+1)}
-	\frac{(-1)^k}{\Delta t^\alpha} \begin{pmatrix}\alpha \\ k \end{pmatrix}
+	\frac{(-1)^k}{\Delta t^{1 - \alpha}} \begin{pmatrix} 1 - \alpha \\ k \end{pmatrix}
 	w^{n+1-k}_{i},
 \end{equation}
 где $m$ --- параметр <<длины памяти>>, определяющий количество слагаемых в приближении.
@@ -102,19 +102,19 @@
 
 \begin{equation}
 	\begin{split}
-		w_i^{n+1} + \Delta t^{1- \alpha} u \frac{w_{i+1}^{n+1} - w_{i-1}^{n+1}}{2 \Delta x}
+		w_i^{n+1} + \Delta t^{\alpha} u \frac{w_{i+1}^{n+1} - w_{i-1}^{n+1}}{2 \Delta x}
 		&= w_i^{n} + \Delta t
 		\left(
 			f_i^{n+1} - u \phi'_{i}\frac{\left(t^n\right)^{\alpha - 1}}{\Gamma(\alpha)}
 		\right.\\
 			&- \frac{u}{2 \Delta x}
 			\sum_{k=1}^{\min (m,n+1)}
-			\frac{(-1)^k}{\Delta t^\alpha} \begin{pmatrix}\alpha \\ k \end{pmatrix}
+			\frac{(-1)^k}{\Delta t^{1-\alpha}} \begin{pmatrix} 1 - \alpha \\ k \end{pmatrix}
 			w^{n+1-k}_{i+1}\\
 		&\left.
 			+ \frac{u}{2 \Delta x}
 			\sum_{k=1}^{\min (m,n+1)}
-			\frac{(-1)^k}{\Delta t^\alpha} \begin{pmatrix}\alpha \\ k \end{pmatrix}
+			\frac{(-1)^k}{\Delta t^{1-\alpha}} \begin{pmatrix} 1 - \alpha \\ k \end{pmatrix}
 			w^{n+1-k}_{i-1}
 		\right)
 	\end{split}
