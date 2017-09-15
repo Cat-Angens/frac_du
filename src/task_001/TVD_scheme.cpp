@@ -15,6 +15,7 @@ TVD_scheme::TVD_scheme(int nx, double dx)
 	mat_F.resize(Nx, std::vector<double>(3, 0.));
 	mat_full.resize(3, std::vector<double>(Nx, 0.));
 	right_part.resize(Nx, 0.);
+	right_part_gl.resize(Nx, 0.);
 	
 	solver = new mat_solve_Thomas(Nx);
 	
@@ -142,23 +143,25 @@ void TVD_scheme::fill_rpart(const std::vector<double> & field_old, const std::ve
 	for (int ix = 1; ix < Nx; ix++)
 	{
 		right_part[ix] = field_old[ix] + dt * sources[ix];
+		right_part_gl[ix] = 0.;
 		for (int adj = 0; adj < 3; ++adj)
 		{
 			if (ix == Nx - 1 && adj == 2)
 				continue;
+			right_part_gl[ix] += mat_F[ix][adj] * field_GL_derivative[ix - 1 + adj];
 			right_part[ix] -= dt * mat_F[ix][adj] * field_GL_derivative[ix - 1 + adj];
 		}
 	}
 	right_part[0] = dt * (sources[0] + GL_derivative_border);
 }
 
-void TVD_scheme::fill_full_matrix(const double dt_1malpha)
+void TVD_scheme::fill_full_matrix(const double dt_alpha)
 {
 	for (int ix = 0; ix < Nx; ix++)
 	{
 		for (int adj = 0; adj < 3; adj++)
 		{
-			mat_full[adj][ix] = dt_1malpha * mat_F[ix][adj];
+			mat_full[adj][ix] = dt_alpha * mat_F[ix][adj];
 			if (adj == 1)
 				mat_full[adj][ix] += 1.;
 		}
@@ -185,11 +188,11 @@ void TVD_scheme::solve_transfer_explicitly(
 	const std::vector<double> & sources,
 	const int it)
 {
-	double dt_1malpha = pow(dt, 1 - alpha);
+	double dt_alpha = pow(dt, alpha);
 	//fill_F(field_old, vel);
 	fill_F_without_tvd(field_old, vel);
 	fill_rpart(field_old, field_GL_derivative, sources, GL_derivative_border, dt);
-	fill_full_matrix(dt_1malpha);
+	fill_full_matrix(dt_alpha);
 	
 #ifdef printmat
 	std::ofstream output_file;
@@ -207,19 +210,23 @@ void TVD_scheme::solve_transfer_explicitly(
 	output_file.close();
 #endif
 	
-	solver->solve(mat_full, right_part, field_new);
-//#pragma omp parallel for
-//	for (int ix = 0; ix < Nx; ix++)
+//	if(it < 3)
+		solver->solve(mat_full, right_part, field_new);
+//	else
 //	{
-//		field_new[ix] = field_old[ix] + sources[ix] * dt;
-//		
-//		for (int adj = 0; adj < 3; adj++)
+////#pragma omp parallel for
+//		for (int ix = 0; ix < Nx; ix++)
 //		{
-//			if ((ix == 0 && adj == 0) || (ix == Nx - 1 && adj == 2))
+//			field_new[ix] = right_part[ix];
+//			
+//			for (int adj = 0; adj < 3; adj++)
 //			{
-//				continue;
+//				if ((ix == 0 && adj == 0) || (ix == Nx - 1 && adj == 2))
+//				{
+//					continue;
+//				}
+//				field_new[ix] -= dt_alpha * mat_F[ix][adj] * field_old[ix];
 //			}
-//			field_new[ix] -= dt * mat_F[ix][adj] * field_GL_derivative[ix + adj - 1];
 //		}
 //	}
 	
@@ -244,6 +251,10 @@ void TVD_scheme::solve_transfer_explicitly(
 	std::ostringstream stringStream7;
 	stringStream7 << "w_" << std::setfill('0') << std::setw(4) << it << ".txt";
 	print_field(stringStream7.str(), field_new);
+	std::ostringstream stringStream8;
+	stringStream8 << "rpartgl_" << std::setfill('0') << std::setw(4) << it << ".txt";
+	print_field(stringStream8.str(), right_part_gl);
+
 	
 }
 

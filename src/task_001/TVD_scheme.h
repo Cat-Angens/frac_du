@@ -18,6 +18,7 @@ class TVD_scheme
 	std::vector<std::vector<double>>  mat_F;        // 3-диагональная матрица конвекции
 	std::vector<std::vector<double>>  mat_full;     // полная 3-диагональная матрица системы
 	std::vector<double>               right_part;   // вектор правой части
+	std::vector<double>               right_part_gl;// вектор правой части
 	
 	mat_solve_Thomas                  *solver;      // решатель СЛАУ методом прогонки
 	

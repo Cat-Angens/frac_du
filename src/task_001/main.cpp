@@ -53,7 +53,7 @@ int main()
 	const int Nx = 100;
 	const double dx = 1.;
 	
-	double dt = 0.01;
+	double dt = 0.1;
 	double finish_time = 10.;
 	
 	const double alpha = 0.99;
@@ -68,10 +68,10 @@ int main()
 	////test Thomas method
 	//// matrix 5x5
 	//std::vector<std::vector<double>> matrix(3, std::vector<double>());
-	//matrix[0] = {0., 1., 7., 1., 1.};
-	//matrix[1] = {4., 2., 2., 1., 1.};
-	//matrix[2] = {3., 1., 1., 2., 0.};
-	//std::vector<double> right_part = {10., 8., 24., 17., 9.};
+	//matrix[0] = {0., -0.1, -0.1, -0.1, -0.1};
+	//matrix[1] = {1., 1., 1., 1., 1.};
+	//matrix[2] = {0.1, 0.1, 0.1, 0.1, 0.};
+	//std::vector<double> right_part = {1.2, 2.2, 3.2, 4.2, 4.6};
 	//std::vector<double> solution(5, 0.);
 	//mat_solve_Thomas solver(5);
 	//solver.solve(matrix, right_part, solution);
@@ -86,7 +86,8 @@ int main()
 	std::vector<double> field(Nx, 0.);
 	std::vector<double> field_new(Nx, 0.);
 	std::vector<double> reconstructed_field(Nx, 0.);
-	std::vector<double> time_deriv_GL_field(Nx, 0.);
+	std::vector<double> time_deriv_GL_1malpha(Nx, 0.);
+	std::vector<double> time_deriv_GL_alpha(Nx, 0.);
 	std::vector<double> sources(Nx, 0.);
 	std::vector<double> dphi_dx(Nx);
 	for (int ix = 0; ix < Nx; ++ix)
@@ -106,10 +107,11 @@ int main()
 	int it = 1;
 	
 	// Grunwald-Letnikov derivative coefficients
-	std::vector<double> GL_coeffs;
-	make_GL_coeff_vec(GL_coeffs, 1 - alpha, time_layers_cnt);
-	print_field(std::string("GL_coeffs.txt"), GL_coeffs);
-	double dt_alpha = pow(dt, 1 - alpha);
+	std::vector<double> GL_coeffs_1malpha;
+	make_GL_coeff_vec(GL_coeffs_1malpha, 1 - alpha, time_layers_cnt);
+	print_field(std::string("GL_coeffs_1malpha.txt"), GL_coeffs_1malpha);
+	double dt_1malpha = pow(dt, 1 - alpha);
+	double dt_alpha = pow(dt, alpha);
 	
 	// right-hand part (source and fractional time derivative)
 	std::vector<double> rpart(Nx, 0.);
@@ -119,14 +121,14 @@ int main()
 	{
 		const int N_calc_time_layers = std::min(time_layers_cnt, it + 1);
 		
-		// fill fractional time derivatives without first term
+		// fill fractional time derivatives (!!) without first term (!!)
 //#pragma omp parallel for
 		for(int ix = 0; ix < Nx; ix++)
 		{
-			time_deriv_GL_field[ix] = 0.;
+			time_deriv_GL_1malpha[ix] = 0.;
 			for (int time_layer = 1; time_layer < N_calc_time_layers; time_layer++)
 			{
-				time_deriv_GL_field[ix] += timelayer_fields[(it - time_layer) % time_layers_cnt][ix] * GL_coeffs[time_layer] / dt_alpha;
+				time_deriv_GL_1malpha[ix] += timelayer_fields[(it - time_layer) % time_layers_cnt][ix] * GL_coeffs_1malpha[time_layer] / dt_1malpha;
 			}
 		}
 		
@@ -145,9 +147,8 @@ int main()
 		double time_deriv_GL_border = vel[0] / pow(dt, alpha)
 			* (get_border_value(time + dt) - get_initial_field(0.) * pow(time + dt, alpha - 1.) / gamma_alpha);
 		
-		
 		// solve
-		solving_scheme.solve_transfer_explicitly(vel, time_deriv_GL_field, time_deriv_GL_border, field, field_new, dt, alpha, rpart, it);
+		solving_scheme.solve_transfer_explicitly(vel, time_deriv_GL_1malpha, time_deriv_GL_border, field, field_new, dt, alpha, rpart, it);
 		
 		// save last field
 //#pragma omp parallel for
@@ -162,28 +163,28 @@ int main()
 //#pragma omp parallel for
 		for (int ix = 0; ix < Nx; ix++)
 		{
-			time_deriv_GL_field[ix] = 0.;
+			time_deriv_GL_alpha[ix] = 0.;
 			for (int time_layer = 0; time_layer < N_calc_time_layers; time_layer++)
 			{
-				time_deriv_GL_field[ix] += timelayer_fields[(it - time_layer) % time_layers_cnt][ix] * GL_coeffs[time_layer] / dt_alpha;
+				time_deriv_GL_alpha[ix] += timelayer_fields[(it - time_layer) % time_layers_cnt][ix] * GL_coeffs_1malpha[time_layer] / dt_alpha;
 			}
 		}
 		std::vector<double> reconstruction_secondpart(Nx, 0.);
 		for (int ix = 0; ix < Nx; ++ix)
 		{
 			reconstruction_secondpart[ix] = get_initial_field(dx * ix) * pow(time + dt, alpha - 1.) / gamma_alpha;
-			reconstructed_field[ix] = time_deriv_GL_field[ix] + get_initial_field(dx * ix) * pow(time + dt, alpha - 1.) / gamma_alpha;
+			reconstructed_field[ix] = time_deriv_GL_alpha[ix] + get_initial_field(dx * ix) * pow(time + dt, alpha - 1.) / gamma_alpha;
 		}
 		
 		// file print
 		std::ostringstream stringStream;
-		stringStream << "field_" << std::setfill('0') << std::setw(int(log10(finish_time / dt)) + 1) << it << ".txt";
+		stringStream << "field_" << std::setfill('0') << std::setw(4) << it << ".txt";
 		print_field(stringStream.str(), reconstructed_field);
 		std::ostringstream stringStream1;
-		stringStream1 << "GLfield_" << std::setfill('0') << std::setw(int(log10(finish_time / dt)) + 1) << it << ".txt";
-		print_field(stringStream1.str(), time_deriv_GL_field);
+		stringStream1 << "GLfield_" << std::setfill('0') << std::setw(4) << it << ".txt";
+		print_field(stringStream1.str(), time_deriv_GL_1malpha);
 		std::ostringstream stringStream2;
-		stringStream2 << "rec2_" << std::setfill('0') << std::setw(int(log10(finish_time / dt)) + 1) << it << ".txt";
+		stringStream2 << "rec2_" << std::setfill('0') << std::setw(4) << it << ".txt";
 		print_field(stringStream2.str(), reconstruction_secondpart);
 
 		
