@@ -177,7 +177,7 @@ double TVD_scheme::tvd_limit(const double r) const
 	
 }
 
-void TVD_scheme::solve_transfer_explicitly(
+void TVD_scheme::solve_transfer(
 	const std::vector<double> &vel,
 	const std::vector<double> &field_GL_derivative,
 	const double GL_derivative_border,
@@ -210,25 +210,7 @@ void TVD_scheme::solve_transfer_explicitly(
 	output_file.close();
 #endif
 	
-//	if(it < 3)
 		solver->solve(mat_full, right_part, field_new);
-//	else
-//	{
-////#pragma omp parallel for
-//		for (int ix = 0; ix < Nx; ix++)
-//		{
-//			field_new[ix] = right_part[ix];
-//			
-//			for (int adj = 0; adj < 3; adj++)
-//			{
-//				if ((ix == 0 && adj == 0) || (ix == Nx - 1 && adj == 2))
-//				{
-//					continue;
-//				}
-//				field_new[ix] -= dt_alpha * mat_F[ix][adj] * field_old[ix];
-//			}
-//		}
-//	}
 	
 	std::ostringstream stringStream1;
 	stringStream1 << "GL_" << std::setfill('0') << std::setw(4) << it << ".txt";

@@ -54,7 +54,7 @@ public:
 	
 	TVD_scheme(int nx, double dx);
 	
-	void solve_transfer_explicitly(
+	void solve_transfer(
 		const std::vector<double> &vel,
 		const std::vector<double> &field_GL_derivative,
 		const double GL_derivative_border,

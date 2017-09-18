@@ -86,8 +86,8 @@ int main()
 	std::vector<double> field(Nx, 0.);
 	std::vector<double> field_new(Nx, 0.);
 	std::vector<double> reconstructed_field(Nx, 0.);
-	std::vector<double> time_deriv_GL_1malpha(Nx, 0.);
-	std::vector<double> time_deriv_GL_alpha(Nx, 0.);
+	std::vector<double> time_deriv_GL_1malpha_before(Nx, 0.);
+	std::vector<double> time_deriv_GL_1malpha_after(Nx, 0.);
 	std::vector<double> sources(Nx, 0.);
 	std::vector<double> dphi_dx(Nx);
 	for (int ix = 0; ix < Nx; ++ix)
@@ -125,10 +125,10 @@ int main()
 //#pragma omp parallel for
 		for(int ix = 0; ix < Nx; ix++)
 		{
-			time_deriv_GL_1malpha[ix] = 0.;
+			time_deriv_GL_1malpha_before[ix] = 0.;
 			for (int time_layer = 1; time_layer < N_calc_time_layers; time_layer++)
 			{
-				time_deriv_GL_1malpha[ix] += timelayer_fields[(it - time_layer) % time_layers_cnt][ix] * GL_coeffs_1malpha[time_layer] / dt_1malpha;
+				time_deriv_GL_1malpha_before[ix] += timelayer_fields[(it - time_layer) % time_layers_cnt][ix] * GL_coeffs_1malpha[time_layer] / dt_1malpha;
 			}
 		}
 		
@@ -148,7 +148,7 @@ int main()
 			* (get_border_value(time + dt) - get_initial_field(0.) * pow(time + dt, alpha - 1.) / gamma_alpha);
 		
 		// solve
-		solving_scheme.solve_transfer_explicitly(vel, time_deriv_GL_1malpha, time_deriv_GL_border, field, field_new, dt, alpha, rpart, it);
+		solving_scheme.solve_transfer(vel, time_deriv_GL_1malpha_before, time_deriv_GL_border, field, field_new, dt, alpha, rpart, it);
 		
 		// save last field
 //#pragma omp parallel for
@@ -163,17 +163,17 @@ int main()
 //#pragma omp parallel for
 		for (int ix = 0; ix < Nx; ix++)
 		{
-			time_deriv_GL_alpha[ix] = 0.;
+			time_deriv_GL_1malpha_after[ix] = 0.;
 			for (int time_layer = 0; time_layer < N_calc_time_layers; time_layer++)
 			{
-				time_deriv_GL_alpha[ix] += timelayer_fields[(it - time_layer) % time_layers_cnt][ix] * GL_coeffs_1malpha[time_layer] / dt_alpha;
+				time_deriv_GL_1malpha_after[ix] += timelayer_fields[(it - time_layer) % time_layers_cnt][ix] * GL_coeffs_1malpha[time_layer] / dt_1malpha;
 			}
 		}
 		std::vector<double> reconstruction_secondpart(Nx, 0.);
 		for (int ix = 0; ix < Nx; ++ix)
 		{
 			reconstruction_secondpart[ix] = get_initial_field(dx * ix) * pow(time + dt, alpha - 1.) / gamma_alpha;
-			reconstructed_field[ix] = time_deriv_GL_alpha[ix] + get_initial_field(dx * ix) * pow(time + dt, alpha - 1.) / gamma_alpha;
+			reconstructed_field[ix] = time_deriv_GL_1malpha_after[ix] + get_initial_field(dx * ix) * pow(time + dt, alpha - 1.) / gamma_alpha;
 		}
 		
 		// file print
@@ -182,7 +182,7 @@ int main()
 		print_field(stringStream.str(), reconstructed_field);
 		std::ostringstream stringStream1;
 		stringStream1 << "GLfield_" << std::setfill('0') << std::setw(4) << it << ".txt";
-		print_field(stringStream1.str(), time_deriv_GL_1malpha);
+		print_field(stringStream1.str(), time_deriv_GL_1malpha_after);
 		std::ostringstream stringStream2;
 		stringStream2 << "rec2_" << std::setfill('0') << std::setw(4) << it << ".txt";
 		print_field(stringStream2.str(), reconstruction_secondpart);
