@@ -85,19 +85,19 @@ void TVD_scheme::fill_F(const std::vector<double> &field, const std::vector<doub
 		
 		if(vel_xy < 0)
 		{
-			mat_F[ix    ][1] -= - phi_term;
-			mat_F[ix    ][2] -=   phi_term + vel_xy;
+			mat_F[ix    ][1] += - phi_term;
+			mat_F[ix    ][2] +=   phi_term + vel_xy;
 			
-			mat_F[ix + 1][0] -=   phi_term;
-			mat_F[ix + 1][1] -= - phi_term - vel_xy;
+			mat_F[ix + 1][0] +=   phi_term;
+			mat_F[ix + 1][1] += - phi_term - vel_xy;
 		}
 		else
 		{
-			mat_F[ix    ][1] -= - phi_term + vel_xy;
-			mat_F[ix    ][2] -=   phi_term;
+			mat_F[ix    ][1] += - phi_term + vel_xy;
+			mat_F[ix    ][2] +=   phi_term;
 			
-			mat_F[ix + 1][0] -=   phi_term - vel_xy;
-			mat_F[ix + 1][1] -= - phi_term;
+			mat_F[ix + 1][0] +=   phi_term - vel_xy;
+			mat_F[ix + 1][1] += - phi_term;
 		}
 	}
 	
@@ -189,8 +189,8 @@ void TVD_scheme::solve_transfer(
 	const int it)
 {
 	double dt_alpha = pow(dt, alpha);
-	//fill_F(field_old, vel);
-	fill_F_without_tvd(field_old, vel);
+	fill_F(field_old, vel);
+	//fill_F_without_tvd(field_old, vel);
 	fill_rpart(field_old, field_GL_derivative, sources, GL_derivative_border, dt);
 	fill_full_matrix(dt_alpha);
 	
