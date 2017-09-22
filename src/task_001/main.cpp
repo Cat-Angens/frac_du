@@ -50,8 +50,8 @@ void get_source_vector(const double time, const double dx, const int Nx, std::ve
 
 int main()
 {
-	const int Nx = 100;
-	const double dx = 1.;
+	const int Nx = 250;
+	const double dx = 0.4;
 	
 	double dt = 0.1;
 	double finish_time = 10.;
