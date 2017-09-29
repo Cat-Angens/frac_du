@@ -25,17 +25,23 @@ double get_source(const double x, const double time)
 // phi(x)
 double get_initial_field(const double x)
 {
-	if (x > 10. && x < 20.)
-		return 1. - (x - 15.) * (x - 15.) / 25.;
-	return 0.;
+	double a = 5.;
+	double b = 30.;
+	if (x >= b || x <= a)
+		return 0.;
+	double b_m_a_2 = (b - a) * 0.5;
+	double b_p_a_2 = (b + a) * 0.5;
+	return exp(b_m_a_2 * b_m_a_2 / ( (x - b_p_a_2) * (x - b_p_a_2) - b_m_a_2 * b_m_a_2) + 1.);
 }
 
 // phi'(x)
 double get_initial_field_derivative(const double x)
 {
-	if (x > 10. && x < 20.)
-		return -2. * (x - 15.) / 25.;
-	return 0.;
+	double a = 5.;
+	double b = 30.;
+	if (x >= b || x <= a)
+		return 0.;
+	return -get_initial_field(x) * 0.5*(b - a)*(b - a)*(x - 0.5*(a + b)) / (x - a) / (x - a) / (x - b) / (x - b);
 }
 
 // psi(t)
@@ -50,11 +56,11 @@ void get_source_vector(const double time, const double dx, const int Nx, std::ve
 
 int main()
 {
-	const int Nx = 250;
-	const double dx = 0.4;
+	const int Nx = 100;
+	const double dx = 1.;
 	
-	double dt = 0.1;
-	double finish_time = 10.;
+	double dt = 0.2;
+	double finish_time = 20.;
 	
 	const double alpha = 0.99;
 	const double gamma_alpha = get_Gamma(alpha);
@@ -172,7 +178,7 @@ int main()
 		std::vector<double> reconstruction_secondpart(Nx, 0.);
 		for (int ix = 0; ix < Nx; ++ix)
 		{
-			reconstruction_secondpart[ix] = get_initial_field(dx * ix) * pow(time + dt, alpha - 1.) / gamma_alpha;
+			reconstruction_secondpart[ix] =                             get_initial_field(dx * ix) * pow(time + dt, alpha - 1.) / gamma_alpha;
 			reconstructed_field[ix] = time_deriv_GL_1malpha_after[ix] + get_initial_field(dx * ix) * pow(time + dt, alpha - 1.) / gamma_alpha;
 		}
 		
@@ -186,7 +192,9 @@ int main()
 		std::ostringstream stringStream2;
 		stringStream2 << "rec2_" << std::setfill('0') << std::setw(4) << it << ".txt";
 		print_field(stringStream2.str(), reconstruction_secondpart);
-
+		std::ostringstream stringStream3;
+		stringStream3 << "dphidx_" << std::setfill('0') << std::setw(4) << it << ".txt";
+		print_field(stringStream3.str(), dphi_dx);
 		
 		// time counters ++
 		time += dt;
