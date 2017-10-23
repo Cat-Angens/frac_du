@@ -102,20 +102,52 @@
 
 \begin{equation}
 	\begin{split}
+		w_0^{n+1} + \Delta t^{\alpha} u \frac{w_{1}^{n+1}}{\Delta x}
+		&= w_0^{n} + \Delta t
+		\left(
+			f_i^{n+1} - u \phi'_{i}\frac{\left(t^n\right)^{\alpha - 1}}{\Gamma(\alpha)}
+		\right.\\
+		&\left. -
+			\left(
+				\frac{u}{\Delta x}
+				\sum_{k=1}^{\min (m,n+1)}
+				\frac{(-1)^k}{\Delta t^{1-\alpha}} \begin{pmatrix} 1 - \alpha \\ k \end{pmatrix}
+				w^{n+1-k}_{1}
+			\right.
+		\right.\\
+		&\left.
+			\left.
+				- \frac{u}{\Delta x}\psi^{n+1} + \frac{u}{\Delta x}\phi_0
+				\frac{\left(t^{n+1}\right)^{\alpha - 1}}{\Gamma(\alpha)}
+			\right)
+		\right)
+	\end{split}
+\end{equation}
+
+\begin{equation}
+	\begin{split}
 		w_i^{n+1} + \Delta t^{\alpha} u \frac{w_{i+1}^{n+1} - w_{i-1}^{n+1}}{2 \Delta x}
 		&= w_i^{n} + \Delta t
 		\left(
 			f_i^{n+1} - u \phi'_{i}\frac{\left(t^n\right)^{\alpha - 1}}{\Gamma(\alpha)}
 		\right.\\
-			&- \frac{u}{2 \Delta x}
-			\sum_{k=1}^{\min (m,n+1)}
-			\frac{(-1)^k}{\Delta t^{1-\alpha}} \begin{pmatrix} 1 - \alpha \\ k \end{pmatrix}
-			w^{n+1-k}_{i+1}\\
 		&\left.
-			+ \frac{u}{2 \Delta x}
-			\sum_{k=1}^{\min (m,n+1)}
-			\frac{(-1)^k}{\Delta t^{1-\alpha}} \begin{pmatrix} 1 - \alpha \\ k \end{pmatrix}
-			w^{n+1-k}_{i-1}
+			\left(
+				\frac{u}{2 \Delta x}
+				\sum_{k=1}^{\min (m,n+1)}
+				\frac{(-1)^k}{\Delta t^{1-\alpha}}
+				\begin{pmatrix} 1 - \alpha \\ k \end{pmatrix}
+				w^{n+1-k}_{i+1}
+			\right.
+		\right.\\
+		&\left.
+			\left.
+				- \frac{u}{2 \Delta x}
+				\sum_{k=1}^{\min (m,n+1)}
+				\frac{(-1)^k}{\Delta t^{1-\alpha}}
+				\begin{pmatrix} 1 - \alpha \\ k \end{pmatrix}
+				w^{n+1-k}_{i-1}
+			\right)
 		\right)
 	\end{split}
 \end{equation}
