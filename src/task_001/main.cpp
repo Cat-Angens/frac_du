@@ -6,10 +6,9 @@
 #include <algorithm>
 #include "TVD_scheme.h"
 #include "mat_solve_Thomas.h"
+#include "tools.h"
 
 double get_Gamma(const double x);
-
-void print_field(std::string filename, std::vector<double> &field);
 
 void get_field_time(std::vector<std::vector<double>> &timelayer_fields, std::vector<double> &field, int time_layers_cnt, int time_layer);
 void add_field_time(std::vector<std::vector<double>> &timelayer_fields, std::vector<double> &field, int time_layers_cnt, int time_layer);
@@ -25,8 +24,8 @@ double get_source(const double x, const double time)
 // phi(x)
 double get_initial_field(const double x)
 {
-	double a = 5.;
-	double b = 30.;
+	double a = 40.;
+	double b = 60.;
 	if (x >= b || x <= a)
 		return 0.;
 	double b_m_a_2 = (b - a) * 0.5;
@@ -35,10 +34,10 @@ double get_initial_field(const double x)
 }
 
 // phi'(x)
-double get_initial_field_derivative(const double x)
+double get_initial_field_derivative(const double x) 
 {
-	double a = 5.;
-	double b = 30.;
+	double a = 40.;
+	double b = 60.;
 	if (x >= b || x <= a)
 		return 0.;
 	return -get_initial_field(x) * 0.5*(b - a)*(b - a)*(x - 0.5*(a + b)) / (x - a) / (x - a) / (x - b) / (x - b);
@@ -101,10 +100,6 @@ int main()
 		dphi_dx[ix] = get_initial_field_derivative(dx * ix);
 	}
 	
-	// initial field values: w === 0 initally!
-	//get_initial_field_vector(dx, Nx, field);
-	//timelayer_fields[0] = field;
-	
 	// solver
 	TVD_scheme solving_scheme(Nx, dx);
 	
@@ -115,19 +110,24 @@ int main()
 	// Grunwald-Letnikov derivative coefficients
 	std::vector<double> GL_coeffs_1malpha;
 	make_GL_coeff_vec(GL_coeffs_1malpha, 1 - alpha, time_layers_cnt);
-	print_field(std::string("GL_coeffs_1malpha.txt"), GL_coeffs_1malpha);
+	
+	// powed dt
 	double dt_1malpha = pow(dt, 1 - alpha);
 	double dt_alpha = pow(dt, alpha);
 	
 	// right-hand part (source and fractional time derivative)
 	std::vector<double> rpart(Nx, 0.);
 	
+	// fprint
+	fprint_vector(std::string("GL_coeffs_1malpha.txt"), GL_coeffs_1malpha);
+	fprint_vector(std::string("dphidx.txt"), dphi_dx);
+	
 	// time cycle
 	while(time < finish_time)
 	{
 		const int N_calc_time_layers = std::min(time_layers_cnt, it + 1);
 		
-		// fill fractional time derivatives (!!) without first term (!!)
+		// fill fractional time derivatives 1-alpha degree without first term (!!) (implicit scheme)
 //#pragma omp parallel for
 		for(int ix = 0; ix < Nx; ix++)
 		{
@@ -138,15 +138,15 @@ int main()
 			}
 		}
 		
-		// fill sources vector
+		// fill sources vector (f(x))
 		get_source_vector(time, dx, Nx, sources);
 		
 		// fill right part
-		// sources
 //#pragma omp parallel for
 		for (int ix = 0; ix < Nx; ix++)
 		{
 			// TODO vel[0] --> vel[ix]
+			// TODO time+dt or time?
 			rpart[ix] = sources[ix] - vel[0] * dphi_dx[ix] * pow(time + dt, alpha - 1.) / gamma_alpha;
 		}
 		// convection part for border
@@ -183,18 +183,9 @@ int main()
 		}
 		
 		// file print
-		std::ostringstream stringStream;
-		stringStream << "field_" << std::setfill('0') << std::setw(4) << it << ".txt";
-		print_field(stringStream.str(), reconstructed_field);
-		std::ostringstream stringStream1;
-		stringStream1 << "GLfield_" << std::setfill('0') << std::setw(4) << it << ".txt";
-		print_field(stringStream1.str(), time_deriv_GL_1malpha_after);
-		std::ostringstream stringStream2;
-		stringStream2 << "rec2_" << std::setfill('0') << std::setw(4) << it << ".txt";
-		print_field(stringStream2.str(), reconstruction_secondpart);
-		std::ostringstream stringStream3;
-		stringStream3 << "dphidx_" << std::setfill('0') << std::setw(4) << it << ".txt";
-		print_field(stringStream3.str(), dphi_dx);
+		fprint_vector("field", it, reconstructed_field);
+		fprint_vector("GLfield", it, time_deriv_GL_1malpha_after);
+		fprint_vector("rec2", it, reconstruction_secondpart);
 		
 		// time counters ++
 		time += dt;
@@ -204,7 +195,7 @@ int main()
 	
 	// print final result
 	std::string filename("out.txt");
-	print_field(filename, reconstructed_field);
+	fprint_vector(filename, reconstructed_field);
 	
 	return 0;
 }
@@ -259,21 +250,6 @@ double get_Gamma(const double alpha)
 	}
 	
 	return gamma * (term1 + term2);
-}
-
-void print_field(std::string filename, std::vector<double> &field)
-{
-	std::ofstream output_file;
-	output_file.open(filename, std::ios::out);
-	
-	for(auto data : field)
-	{
-		output_file << data << std::endl;
-	}
-	
-	output_file.close();
-	
-	return;
 }
 
 void get_field_time(std::vector<std::vector<double>> &timelayer_fields, std::vector<double> &field, int time_layers_cnt, int time_layer)

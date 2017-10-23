@@ -1,9 +1,6 @@
 
 #include "TVD_scheme.h"
-#include <fstream>
-#include <iostream>
-#include <sstream>
-#include <iomanip>
+#include "tools.h"
 
 #define printmat
 
@@ -19,9 +16,9 @@ TVD_scheme::TVD_scheme(int nx, double dx)
 	
 	solver = new mat_solve_Thomas(Nx);
 	
-	std::ofstream output_file;
+/*	std::ofstream output_file;
 	output_file.open(std::string("mat_f.txt"), std::ios::out);
-	output_file.close();
+	output_file.close();*/
 }
 
 double TVD_scheme::get_r_i_biased(const std::vector<double> &field, const std::vector<double> &vel_edg, int ix) const
@@ -195,7 +192,7 @@ void TVD_scheme::solve_transfer(
 	fill_full_matrix(dt_alpha);
 	
 #ifdef printmat
-	std::ofstream output_file;
+/*	std::ofstream output_file;
 	output_file.open(std::string("mat_f.txt"), std::ios::app);
 	
 	for(auto row : mat_F)
@@ -207,37 +204,21 @@ void TVD_scheme::solve_transfer(
 		output_file << std::endl;
 	}
 	output_file << "################ FINISHED F ################" << std::endl << std::endl;
-	output_file.close();
+	output_file.close();*/
 #endif
 	
-		solver->solve(mat_full, right_part, field_new);
+	solver->solve(mat_full, right_part, field_new);
 	
-	std::ostringstream stringStream1;
-	stringStream1 << "GL_" << std::setfill('0') << std::setw(4) << it << ".txt";
-	print_field(stringStream1.str(), field_GL_derivative);
-	std::ostringstream stringStream2;
-	stringStream2 << "rpart_" << std::setfill('0') << std::setw(4) << it << ".txt";
-	print_field(stringStream2.str(), right_part);
-	std::ostringstream stringStream3;
-	stringStream3 << "sources_" << std::setfill('0') << std::setw(4) << it << ".txt";
-	print_field(stringStream3.str(), sources);
-	std::ostringstream stringStream4;
-	stringStream4 << "mat0_" << std::setfill('0') << std::setw(4) << it << ".txt";
-	print_field(stringStream4.str(), mat_full[0]);
-	std::ostringstream stringStream5;
-	stringStream5 << "mat1_" << std::setfill('0') << std::setw(4) << it << ".txt";
-	print_field(stringStream5.str(), mat_full[1]);
-	std::ostringstream stringStream6;
-	stringStream6 << "mat2_" << std::setfill('0') << std::setw(4) << it << ".txt";
-	print_field(stringStream6.str(), mat_full[2]);
-	std::ostringstream stringStream7;
-	stringStream7 << "w_" << std::setfill('0') << std::setw(4) << it << ".txt";
-	print_field(stringStream7.str(), field_new);
-	std::ostringstream stringStream8;
-	stringStream8 << "rpartgl_" << std::setfill('0') << std::setw(4) << it << ".txt";
-	print_field(stringStream8.str(), right_part_gl);
-
+	fprint_vector(std::string("GL"), it, field_GL_derivative);
+	fprint_vector(std::string("rpart"), it, right_part);
+	fprint_vector(std::string("sources"), it, sources);
+	fprint_vector(std::string("mat0"), it, mat_full[0]);
+	fprint_vector(std::string("mat1"), it, mat_full[1]);
+	fprint_vector(std::string("mat2"), it, mat_full[2]);
+	fprint_vector(std::string("w"), it, field_new);
+	fprint_vector(std::string("rpartgl"), it, right_part_gl);
 	
+	return;
 }
 
 void TVD_scheme::fill_Phi(const std::vector<double> &field, const std::vector<double> &vel_edg)
@@ -248,17 +229,4 @@ void TVD_scheme::fill_Phi(const std::vector<double> &field, const std::vector<do
 		Phi[ix] = tvd_limit(get_r_i_biased(field, vel_edg, ix));
 	}
 	
-}
-
-void TVD_scheme::print_field(std::string filename, const std::vector<double> &field) const
-{
-	std::ofstream output_file;
-	output_file.open(filename, std::ios::out);
-
-	for (auto data : field)
-	{
-		output_file << data << std::endl;
-	}
-
-	return;
 }

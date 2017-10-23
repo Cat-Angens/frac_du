@@ -83,10 +83,12 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="mat_solve_Thomas.cpp" />
+    <ClCompile Include="tools.cpp" />
     <ClCompile Include="TVD_scheme.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="mat_solve_Thomas.h" />
+    <ClInclude Include="tools.h" />
     <ClInclude Include="TVD_scheme.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

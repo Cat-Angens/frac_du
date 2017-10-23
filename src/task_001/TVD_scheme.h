@@ -48,8 +48,6 @@ class TVD_scheme
 		const std::vector<double> &vel_edg);
 	double tvd_limit(const double r) const;
 
-	void print_field(std::string filename, const std::vector<double> &field) const;
-	
 public:
 	
 	TVD_scheme(int nx, double dx);
@@ -66,6 +64,4 @@ public:
 		const int it);
 	
 };
-
-
 
