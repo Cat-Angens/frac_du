@@ -1,0 +1,32 @@
+\section{Задача без источника с постоянной скоростью}
+
+Для первого приближения принимается упрощение: скорость переноса $u(x,t)$ принимается за постоянную
+
+\begin{equation}
+	u(x,t) \equiv u = const,
+\end{equation}
+также считаем задачу без источников $f(x,t)\equiv0$, тогда система (\label{eq:def_0}) принимает вид
+
+\begin{equation}
+	\label{eq:an_0}
+	\begin{cases}
+		D^\alpha_t c + uc_x = 0\\
+		\left.J^{1-\alpha}_tc\right|_{t=0} = \phi(x)\\
+		\left.c\right|_{x=0}=\psi(t)
+	\end{cases}
+\end{equation}
+
+Тогда применяем преобразование Лапласа $L_t(f(t))$ к главному уравнению системы, учитывая свойство
+\begin{equation}
+	L_t(D^\alpha_tf(t))(s) = s^\alpha f^* - \left. I^{1-\alpha}_tf \right|_{t=0},
+\end{equation}
+и получаем
+\begin{equation}
+	s^\alpha c^*(x,s) - \phi(x) + u c^*_x(x,s) = 0,
+\end{equation}
+%\begin{equation}
+%	c^*(x,s) = \frac{\phi(x)}{s^\alpha + u D_x}.
+%\end{equation}
+\begin{equation}
+	c^*(x,s) = - \phi(x) + u c^*_x(x,s) = 0,
+\end{equation}
