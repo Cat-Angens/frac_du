@@ -150,7 +150,7 @@ int main()
 			rpart[ix] = sources[ix] - vel[0] * dphi_dx[ix] * pow(time + dt, alpha - 1.) / gamma_alpha;
 		}
 		// convection part for border
-		double time_deriv_GL_border = vel[0] / pow(dt, alpha)
+		double time_deriv_GL_border = vel[0] / dx
 			* (get_border_value(time + dt) - get_initial_field(0.) * pow(time + dt, alpha - 1.) / gamma_alpha);
 		
 		// solve
