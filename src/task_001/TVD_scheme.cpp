@@ -101,7 +101,9 @@ void TVD_scheme::fill_F(const std::vector<double> &field, const std::vector<doub
 	return;
 }
 
-void TVD_scheme::fill_F_without_tvd(const std::vector<double> &field, const std::vector<double> &vel_edg)
+void TVD_scheme::fill_F_without_tvd(
+	const std::vector<double> &field,
+	const std::vector<double> &vel_edg)
 {
 #pragma omp parallel for
 	for(int ix = 0; ix < Nx; ix++)
@@ -135,7 +137,12 @@ void TVD_scheme::fill_F_without_tvd(const std::vector<double> &field, const std:
 	return;
 }
 
-void TVD_scheme::fill_rpart(const std::vector<double> & field_old, const std::vector<double>& field_GL_derivative, const std::vector<double>& sources, const double GL_derivative_border, const double dt)
+void TVD_scheme::fill_rpart(
+	const std::vector<double>& field_old,
+	const std::vector<double>& field_GL_derivative,
+	const std::vector<double>& sources,
+	const double GL_derivative_border,
+	const double dt)
 {
 	for (int ix = 1; ix < Nx; ix++)
 	{
@@ -149,7 +156,7 @@ void TVD_scheme::fill_rpart(const std::vector<double> & field_old, const std::ve
 			right_part[ix] -= dt * mat_F[ix][adj] * field_GL_derivative[ix - 1 + adj];
 		}
 	}
-	right_part[0] = dt * (sources[0] + GL_derivative_border);
+	right_part[0] = dt * (sources[0] - mat_F[0][2] * field_GL_derivative[1] + GL_derivative_border);
 }
 
 void TVD_scheme::fill_full_matrix(const double dt_alpha)
