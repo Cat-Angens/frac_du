@@ -24,28 +24,39 @@ double get_source(const double x, const double time)
 // phi(x)
 double get_initial_field(const double x)
 {
-	double a = 40.;
-	double b = 60.;
-	if (x >= b || x <= a)
+	double x1 = 40.;
+	double x2 = 60.;
+	double a = 0.5 * (x2 - x1);
+	double b = 0.5 * (x2 + x1);
+	if (x >= x2 || x <= x1)
 		return 0.;
-	double b_m_a_2 = (b - a) * 0.5;
-	double b_p_a_2 = (b + a) * 0.5;
-	return exp(b_m_a_2 * b_m_a_2 / ( (x - b_p_a_2) * (x - b_p_a_2) - b_m_a_2 * b_m_a_2) + 1.);
+	return exp(- a*a / (a*a - (x-b)*(x-b)) + 1.);
 }
 
 // phi'(x)
 double get_initial_field_derivative(const double x) 
 {
-	double a = 40.;
-	double b = 60.;
-	if (x >= b || x <= a)
+	double x1 = 40.;
+	double x2 = 60.;
+	double a = 0.5 * (x2 - x1);
+	double b = 0.5 * (x2 + x1);
+	if (x >= x2 || x <= x1)
 		return 0.;
-	return -get_initial_field(x) * 0.5*(b - a)*(b - a)*(x - 0.5*(a + b)) / (x - a) / (x - a) / (x - b) / (x - b);
+	double denom = (a*a - (x-b)*(x-b));
+	return -get_initial_field(x) * a*a / denom / denom * 2 * (x - b);
 }
 
 // psi(t)
 double get_border_value(const double time)
 {
+	return 0.;
+}
+
+// точное решение
+double get_analyt_solution(const double x, const double u, const double t, const double alpha = 1.)
+{
+	if(alpha == 1.)
+		return get_initial_field(x - u * t);
 	return 0.;
 }
 
@@ -61,7 +72,7 @@ int main()
 	double dt = 0.2;
 	double finish_time = 20.;
 	
-	const double alpha = 0.99;
+	const double alpha = 0.9;
 	const double gamma_alpha = get_Gamma(alpha);
 	
 	// memory effects variables
@@ -95,6 +106,8 @@ int main()
 	std::vector<double> time_deriv_GL_1malpha_after(Nx, 0.);
 	std::vector<double> sources(Nx, 0.);
 	std::vector<double> dphi_dx(Nx);
+	std::vector<double> analyt_solution(Nx);
+	
 	for (int ix = 0; ix < Nx; ++ix)
 	{
 		dphi_dx[ix] = get_initial_field_derivative(dx * ix);
@@ -182,10 +195,16 @@ int main()
 			reconstructed_field[ix] = time_deriv_GL_1malpha_after[ix] + get_initial_field(dx * ix) * pow(time + dt, alpha - 1.) / gamma_alpha;
 		}
 		
+		for (int ix = 0; ix < Nx; ++ix)
+		{
+			analyt_solution[ix] = get_analyt_solution(dx * ix, vel[0], time);
+		}
+		
 		// file print
 		fprint_vector("field", it, reconstructed_field);
 		fprint_vector("GLfield", it, time_deriv_GL_1malpha_after);
 		fprint_vector("rec2", it, reconstruction_secondpart);
+		fprint_vector("analyt_sol", it, analyt_solution);
 		
 		// time counters ++
 		time += dt;
