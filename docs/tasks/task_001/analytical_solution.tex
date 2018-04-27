@@ -25,7 +25,7 @@
 	s^\alpha c^*(x,s) - \phi(x) + u c^*_x(x,s) = 0,
 \end{equation}
 \begin{equation}
-	c^*_x(x,s) + \frac{s^\alpha}{u}c^*(x,s) = \phi(x).
+	c^*_x(x,s) + \frac{s^\alpha}{u}c^*(x,s) = \frac{\phi(x)}{u}.
 \end{equation}
 Общее решение полученного уравнения:
 \begin{equation}
@@ -48,9 +48,9 @@
 \begin{equation}
 	L^{-1}\left\{e^{-\frac{s^\alpha}{u}x}; t\right\} = t^{-1} e^{1,0}_{1, \alpha}\left(-\frac{x}{u}t^{-\alpha}\right),
 \end{equation}
-где $e_{\alpha, \beta}^{\mu, \delta}$ --- функция типа Райта, в случае $\alpha = \mu = 1$ совпадающая с функцией Райта
+где $e_{\alpha, \beta}^{\mu, \delta}$ --- функция типа Райта, в случае $\alpha = \mu = 1$ совпадающая с функцией Райта $\Phi$:
 \begin{equation}
-	e_{1, \beta}^{1, \delta}(z) = \phi\left(-\beta, \delta, z\right) =
+	e_{1, \beta}^{1, \delta}(z) = \Phi\left(-\beta, \delta, z\right) =
 	\sum_{n=0}^\infty\frac{z^n}{n!\Gamma(-\beta n + \delta)}.
 \end{equation}
 Тогда
@@ -67,10 +67,19 @@
 \begin{equation}
 	\left(f * g\right) \left(t\right) = \int_0^t f\left(\eta\right) g\left(t - \eta\right) d \eta
 \end{equation}
---- свертка функций, получаем решение в исходных координатах:
+--- свертка функций
+
+Получаем решение в исходных координатах:
+\begin{equation}
+	\begin{split}
+		c(x,t) & = \psi(t) * \left(t^{-1} \Phi \left(-\alpha, 0, -\frac{xt^{-\alpha}}{u}\right) \right) + \\
+		& + \phi(x) * \left(t^{-1} \Phi\left(-\alpha, 0, -\frac{xt^{-\alpha}}{u}\right) \right),\\
+	\end{split}
+\end{equation}
+где свертка в первом слагаемом берется по переменной $t$, во втором --- по $x$. Или, разворачивая в интегральный вид:
 \begin{equation}
 	\begin{split}
 		c(x,t) & = \int_{0}^{t} \psi(t - \eta) \sum_{n=0}^\infty\left(-\frac{x}{u}\right)^n \frac{\eta^{-\alpha n - 1}}{n!\Gamma(-\alpha n)} d \eta\\
-		& + \int_0^x \frac{\phi(\xi)}{u} \sum_{n=0}^\infty\left(-\frac{\xi-x}{u}\right)^n \frac{t^{-\alpha n - 1}}{n!\Gamma(-\alpha n)} d \xi\\
+		& + \int_0^x \phi(\xi) \sum_{n=0}^\infty\left(-\frac{\xi-x}{u}\right)^n \frac{t^{-\alpha n - 1}}{n!\Gamma(-\alpha n)} d \xi\\
 	\end{split}
 \end{equation}
