@@ -7,8 +7,9 @@
 #include "TVD_scheme.h"
 #include "mat_solve_Thomas.h"
 #include "tools.h"
+#include <cassert>
 
-double get_Gamma(const double x);
+double get_Gamma(const double alpha);
 
 void get_field_time(std::vector<std::vector<double>> &timelayer_fields, std::vector<double> &field, int time_layers_cnt, int time_layer);
 void add_field_time(std::vector<std::vector<double>> &timelayer_fields, std::vector<double> &field, int time_layers_cnt, int time_layer);
@@ -63,16 +64,19 @@ double get_analyt_solution(const double x, const double u, const double t, const
 void get_initial_field_vector(const double dx, const int Nx, std::vector<double> &field);
 void get_source_vector(const double time, const double dx, const int Nx, std::vector<double> &source);
 
+void fill_analyt_field(const double alpha, const double time, const double dt, const double dx, const int Nx, const std::vector<double>& gamma_n_alpha_vals, const
+                       std::vector<double>& factorial_n_vals, const
+                       std::vector<double>& velocity, std::vector<double> &field);
 
 int main()
 {
 	const int Nx = 100;
 	const double dx = 1.;
 	
-	double dt = 0.2;
+	double dt = 0.1;
 	double finish_time = 20.;
 	
-	const double alpha = 0.9;
+	const double alpha = 0.5;
 	const double gamma_alpha = get_Gamma(alpha);
 	
 	// memory effects variables
@@ -222,11 +226,13 @@ int main()
 double get_Gamma(const double alpha)
 {
 	// define alpha1 belonging between 1 and 2
-	double alpha1 = alpha - double(int(alpha)) + 1.;
+	const double alpha1 = alpha - floor(alpha) + 1.;
 	
 	double gamma = 1.;
-	if (alpha < 1.)
+	if (alpha < 1. && alpha > 0.)
+	{
 		gamma /= alpha;
+	}
 	else if (alpha > 2.)
 	{
 		double a = alpha;
@@ -235,6 +241,10 @@ double get_Gamma(const double alpha)
 			gamma *= a - 1.;
 			a -= 1.;
 		}
+	}
+	else if (alpha < 0.)
+	{
+		const std::string a = "zhopa";
 	}
 	
 	// first term (sum)
@@ -292,7 +302,7 @@ void make_GL_coeff_vec(std::vector<double> &GL_vec, double alpha, int n)
 	GL_vec[0] = 1.;
 	for(int i = 1; i < n + 1; i++)
 	{
-		double mult = (alpha - i + 1) / i;
+		const double mult = (alpha - i + 1) / i;
 		GL_vec[i] = GL_vec[i - 1] * mult;
 	}
 	
@@ -304,6 +314,8 @@ void make_GL_coeff_vec(std::vector<double> &GL_vec, double alpha, int n)
 
 void get_initial_field_vector(const double dx, const int Nx, std::vector<double> &field)
 {
+	assert(field.size() == static_cast<size_t>(Nx));
+	
 	for (int ix = 0; ix < Nx; ix++)
 	{
 		field[ix] = get_initial_field(dx * ix);
@@ -314,10 +326,75 @@ void get_initial_field_vector(const double dx, const int Nx, std::vector<double>
 
 void get_source_vector(const double time, const double dx, const int Nx, std::vector<double> &source)
 {
+	assert(source.size() == static_cast<size_t>(Nx));
+	
 	for (int ix = 0; ix < Nx; ix++)
 	{
 		source[ix] = get_source(dx * ix, time);
 	}
 	
+	return;
+}
+
+void fill_analyt_field(const double alpha, const double time, const double dt_, const double dx, const int Nx,
+                       const std::vector<double>& gamma_n_alpha_vals, const
+                       std::vector<double>& factorial_n_vals, const
+                       std::vector<double>& velocity, std::vector<double>& field)
+{
+	
+	assert(field.size() == static_cast<size_t>(Nx));
+	assert(time > dt_);
+	assert(dt_ > 0.); assert(dx > 0.); assert(alpha > 0.);
+
+	for(int ix_global = 0; ix_global < Nx; ++ix_global)
+	{
+		// TODO рассмотреть случай отрицательной скорости
+		assert(velocity[ix_global] >= 0.);
+		
+		// TODO обработать отдельно случай ix_global = 0
+		
+		// Второе слагаемое - свертка по x
+		double term2 = 0.;
+		// Интеграл от 0 до x
+		for(int ix = 0; ix < ix_global; ++ix)
+		{
+			const double x = dx * ix;
+			const double xi = dx * (Nx - 1 - ix);
+			
+			const int row_cnt = gamma_n_alpha_vals.size();
+			double row_sum = 0.;
+			for(int i = 0; i < row_cnt; ++i)
+			{
+				row_sum += pow((x - xi) / velocity[ix], i) * pow(time, -alpha * i - 1.) / factorial_n_vals[i] / gamma_n_alpha_vals[i];
+			}
+			
+			term2 += get_initial_field(xi) / velocity[ix] * row_sum;
+			
+		}
+		
+		 // TODO обработать отдельно случай t = 0
+		// Первое слагаеоме аналитического решения - свертка по t
+		double term1 = 0.;
+		
+		const auto nt = static_cast<int>(time / dt_ + 1.);
+		const double dt = time / static_cast<double>(nt);
+		
+		// Итерирование по времени
+		for(int it = 1; it < nt; ++it)
+		{
+			const double t = dt * it;
+			const double eta = time - t;
+			const double x = dx * ix_global;
+			
+			const int row_cnt = gamma_n_alpha_vals.size();
+			double row_sum = 0.;
+			for(int i = 0; i < row_cnt; ++i)
+			{
+				row_sum += pow(- x / velocity[ix_global], i) * pow(eta, -alpha * i - 1.) / factorial_n_vals[i] / gamma_n_alpha_vals[i];
+			}
+			term1 += get_border_value(time - eta) * row_sum;
+			
+		}
+	}
 	return;
 }
