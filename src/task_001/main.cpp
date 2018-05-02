@@ -228,6 +228,7 @@ double get_Gamma(const double alpha)
 	// define alpha1 belonging between 1 and 2
 	const double alpha1 = alpha - floor(alpha) + 1.;
 	
+	// calculate coefficient to get Gamma of alpha from Gamma of alpha1
 	double gamma = 1.;
 	if (alpha < 1. && alpha > 0.)
 	{
@@ -244,14 +245,19 @@ double get_Gamma(const double alpha)
 	}
 	else if (alpha < 0.)
 	{
-		const std::string a = "zhopa";
+		double a = alpha;
+		while (a < 1.)
+		{
+			gamma /= a;
+			a += 1.;
+		}
 	}
 	
 	// first term (sum)
 	double term1 = 0.;
 	// number of terms in first sum
 	const int n = 10;
-	// threshold for ins=tegral disecting
+	// threshold for integral disecting
 	const double x0 = 2.;
 	for (int i = 0; i < n; ++i)
 	{
