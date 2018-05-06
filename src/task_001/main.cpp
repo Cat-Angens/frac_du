@@ -245,6 +245,7 @@ double get_Gamma(const double alpha)
 	}
 	else if (alpha < 0.)
 	{
+		// TODO в случае целого отрицательного возвращать большое число
 		double a = alpha;
 		while (a < 1.)
 		{
@@ -351,6 +352,7 @@ void fill_analyt_field(const double alpha, const double time, const double dt_, 
 	assert(field.size() == static_cast<size_t>(Nx));
 	assert(time > dt_);
 	assert(dt_ > 0.); assert(dx > 0.); assert(alpha > 0.);
+	assert(gamma_n_alpha_vals.size() == factorial_n_vals.size());
 
 	for(int ix_global = 0; ix_global < Nx; ++ix_global)
 	{
@@ -362,10 +364,10 @@ void fill_analyt_field(const double alpha, const double time, const double dt_, 
 		// ¬торое слагаемое - свертка по x
 		double term2 = 0.;
 		// »нтеграл от 0 до x
-		for(int ix = 0; ix < ix_global; ++ix)
+		for(int ix = 0; ix <= ix_global; ++ix)
 		{
 			const double x = dx * ix;
-			const double xi = dx * (Nx - 1 - ix);
+			const double xi = dx * (ix_global - ix);
 			
 			const int row_cnt = gamma_n_alpha_vals.size();
 			double row_sum = 0.;
