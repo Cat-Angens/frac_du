@@ -412,7 +412,6 @@ void fill_analyt_field(const double alpha, const double time, const double dt_, 
 			assert(!std::isnan(term2) && !std::isinf(term2));
 			
 		}
-		term2 /= time;
 		assert(!std::isnan(term2) && !std::isinf(term2));
 		
 		 // TODO обработать отдельно случай t = 0
