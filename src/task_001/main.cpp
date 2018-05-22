@@ -103,6 +103,7 @@ int main()
 	
 	// fields
 	std::vector<double> vel(Nx - 1, 2.);
+	std::vector<double> vel_on_nodes(Nx, 2.);
 	std::vector<double> field(Nx, 0.);
 	std::vector<double> field_new(Nx, 0.);
 	std::vector<double> reconstructed_field(Nx, 0.);
@@ -111,6 +112,24 @@ int main()
 	std::vector<double> sources(Nx, 0.);
 	std::vector<double> dphi_dx(Nx);
 	std::vector<double> analyt_solution(Nx);
+	std::vector<double> analyt_solution_frac(Nx);
+	
+	// Pre-calc gamma function of n*alpha values
+	const double gamma_n_alpha_depth = 10;
+	std::vector<double> gamma_n_alpha_vals(gamma_n_alpha_depth);
+	std::vector<double> factorial_n_vals(gamma_n_alpha_depth);
+	for(int i = 0; i < gamma_n_alpha_depth; i++)
+	{
+		gamma_n_alpha_vals[i] = get_Gamma(alpha * i);
+		if(i == 0)
+		{
+			factorial_n_vals[i] = 1.;
+		}
+		else
+		{
+			factorial_n_vals[i] = factorial_n_vals[i - 1] * i;
+		}
+	}
 	
 	for (int ix = 0; ix < Nx; ++ix)
 	{
@@ -210,6 +229,12 @@ int main()
 		fprint_vector("rec2", it, reconstruction_secondpart);
 		fprint_vector("analyt_sol", it, analyt_solution);
 		
+		if(it % 30 == 0)
+		{
+			fill_analyt_field(alpha, time, dt, dx, Nx, gamma_n_alpha_vals, factorial_n_vals, vel_on_nodes, analyt_solution_frac);
+			fprint_vector("analyt_frac_sol", it, analyt_solution_frac);
+		}
+		
 		// time counters ++
 		time += dt;
 		it++;
@@ -245,10 +270,12 @@ double get_Gamma(const double alpha)
 	}
 	else if (alpha < 0.)
 	{
-		// TODO в случае целого отрицательного возвращать большое число
 		double a = alpha;
 		while (a < 1.)
 		{
+			// в случае целого отрицательного возвращать большое число
+			if(fabs(a) < 1e-6)
+				return 1e10;
 			gamma /= a;
 			a += 1.;
 		}
@@ -354,31 +381,39 @@ void fill_analyt_field(const double alpha, const double time, const double dt_, 
 	assert(dt_ > 0.); assert(dx > 0.); assert(alpha > 0.);
 	assert(gamma_n_alpha_vals.size() == factorial_n_vals.size());
 
-	for(int ix_global = 0; ix_global < Nx; ++ix_global)
+	for(int ix_global = 1; ix_global < Nx; ++ix_global)
 	{
 		// TODO рассмотреть случай отрицательной скорости
 		assert(velocity[ix_global] >= 0.);
+		
+		const double x = dx * ix_global;
 		
 		// TODO обработать отдельно случай ix_global = 0
 		
 		// Второе слагаемое - свертка по x
 		double term2 = 0.;
+		
 		// Интеграл от 0 до x
 		for(int ix = 0; ix <= ix_global; ++ix)
 		{
-			const double x = dx * ix;
-			const double xi = dx * (ix_global - ix);
+			const double xi = dx * ix;
 			
 			const int row_cnt = gamma_n_alpha_vals.size();
 			double row_sum = 0.;
 			for(int i = 0; i < row_cnt; ++i)
 			{
-				row_sum += pow((x - xi) / velocity[ix], i) * pow(time, -alpha * i - 1.) / factorial_n_vals[i] / gamma_n_alpha_vals[i];
+				const double mult1 = (i % 2 == 0) ? 1. : -1.;
+				const double mult2 = (xi - x > 0) ? 1. : -1.;
+				row_sum += mult1 * mult2 * pow( fabs(xi - x) / velocity[ix], i) * pow(time, -alpha * i - 1.) / factorial_n_vals[i] / gamma_n_alpha_vals[i];
 			}
 			
 			term2 += get_initial_field(xi) / velocity[ix] * row_sum;
 			
+			assert(!std::isnan(term2) && !std::isinf(term2));
+			
 		}
+		term2 /= time;
+		assert(!std::isnan(term2) && !std::isinf(term2));
 		
 		 // TODO обработать отдельно случай t = 0
 		// Первое слагаеоме аналитического решения - свертка по t
@@ -392,7 +427,6 @@ void fill_analyt_field(const double alpha, const double time, const double dt_, 
 		{
 			const double t = dt * it;
 			const double eta = time - t;
-			const double x = dx * ix_global;
 			
 			const int row_cnt = gamma_n_alpha_vals.size();
 			double row_sum = 0.;
@@ -403,6 +437,9 @@ void fill_analyt_field(const double alpha, const double time, const double dt_, 
 			term1 += get_border_value(time - eta) * row_sum;
 			
 		}
+		assert(!std::isnan(term1) && !std::isinf(term1));
+
+		field[ix_global] = term1 + term2;
 	}
 	return;
 }
