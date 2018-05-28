@@ -403,11 +403,11 @@ void fill_analyt_field(const double alpha, const double time, const double dt_, 
 			for(int i = 0; i < row_cnt; ++i)
 			{
 				const double mult1 = (i % 2 == 0) ? 1. : -1.;
-				const double mult2 = (xi - x > 0) ? 1. : -1.;
+				const double mult2 = (i % 2 == 0 || (xi - x) / velocity[ix] > 0) ? 1. : -1.;
 				row_sum += mult1 * mult2 * pow( fabs(xi - x) / velocity[ix], i) * pow(time, -alpha * i - 1.) / factorial_n_vals[i] / gamma_n_alpha_vals[i];
 			}
 			
-			term2 += get_initial_field(xi) / velocity[ix] * row_sum;
+			term2 += get_initial_field(xi) * row_sum;
 			
 			assert(!std::isnan(term2) && !std::isinf(term2));
 			
