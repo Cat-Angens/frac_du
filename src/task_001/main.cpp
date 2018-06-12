@@ -72,16 +72,16 @@ int main()
 {
 	const int Nx = 100;
 	const double dx = 1.;
+
+	const double dt = 0.1;
+	const double finish_time = 20.;
 	
-	double dt = 0.1;
-	double finish_time = 20.;
-	
-	const double alpha = 0.5;
+	const double alpha = 0.9;
 	const double gamma_alpha = get_Gamma(alpha);
 	
 	// memory effects variables
-	double t_len = 5.;
-	int    time_layers_cnt = std::max(2, int(t_len / dt)); // minimum 2 layers - current and previous
+	const double t_len = 5.;
+	const int    time_layers_cnt = std::max(2, int(t_len / dt)); // minimum 2 layers - current and previous
 	std::vector<std::vector<double>> timelayer_fields(time_layers_cnt, std::vector<double>(Nx, 0.));
 	std::cout << "Time memory " << t_len << " secs (" << time_layers_cnt << " time steps)" << std::endl;
 	
@@ -115,7 +115,7 @@ int main()
 	std::vector<double> analyt_solution_frac(Nx);
 	
 	// Pre-calc gamma function of n*alpha values
-	const double gamma_n_alpha_depth = 10;
+	const double gamma_n_alpha_depth = 100;
 	std::vector<double> gamma_n_alpha_vals(gamma_n_alpha_depth);
 	std::vector<double> factorial_n_vals(gamma_n_alpha_depth);
 	for(int i = 0; i < gamma_n_alpha_depth; i++)
@@ -229,7 +229,7 @@ int main()
 		fprint_vector("rec2", it, reconstruction_secondpart);
 		fprint_vector("analyt_sol", it, analyt_solution);
 		
-		if(it % 30 == 0)
+		if(it > 2)
 		{
 			fill_analyt_field(alpha, time, dt, dx, Nx, gamma_n_alpha_vals, factorial_n_vals, vel_on_nodes, analyt_solution_frac);
 			fprint_vector("analyt_frac_sol", it, analyt_solution_frac);
@@ -380,13 +380,18 @@ void fill_analyt_field(const double alpha, const double time, const double dt_, 
 	assert(time > dt_);
 	assert(dt_ > 0.); assert(dx > 0.); assert(alpha > 0.);
 	assert(gamma_n_alpha_vals.size() == factorial_n_vals.size());
-
-	for(int ix_global = 1; ix_global < Nx; ++ix_global)
+	
+	// Ставим максимальное x для нормировки (для сходимости ряда делаем x от 0 до 0.5)
+	const double max_x = dx * Nx * 2;
+	
+	for(int x_i = 1; x_i < Nx; ++x_i)
 	{
 		// TODO рассмотреть случай отрицательной скорости
-		assert(velocity[ix_global] >= 0.);
+		assert(velocity[x_i] >= 0.);
 		
-		const double x = dx * ix_global;
+		const double x = dx * x_i;
+		// x normalized from 0 to max_x
+		const double x_nm = x / max_x;
 		
 		// TODO обработать отдельно случай ix_global = 0
 		
@@ -394,17 +399,22 @@ void fill_analyt_field(const double alpha, const double time, const double dt_, 
 		double term2 = 0.;
 		
 		// Интеграл от 0 до x
-		for(int ix = 0; ix <= ix_global; ++ix)
+		for(int xi_i = 0; xi_i <= x_i; ++xi_i)
 		{
-			const double xi = dx * ix;
+			const double xi = dx * xi_i;
+			// normalized xi
+			const double xi_nm = xi / max_x;
+			
+			assert(xi <= x);
 			
 			const int row_cnt = gamma_n_alpha_vals.size();
 			double row_sum = 0.;
 			for(int i = 0; i < row_cnt; ++i)
 			{
 				const double mult1 = (i % 2 == 0) ? 1. : -1.;
-				const double mult2 = (i % 2 == 0 || (xi - x) / velocity[ix] > 0) ? 1. : -1.;
-				row_sum += mult1 * mult2 * pow( fabs(xi - x) / velocity[ix], i) * pow(time, -alpha * i - 1.) / factorial_n_vals[i] / gamma_n_alpha_vals[i];
+				const double mult2 = (i % 2 == 0 || (xi - x) / velocity[xi_i] > 0) ? 1. : -1.;
+				row_sum += mult1 * mult2 * pow( fabs(xi_nm - x_nm) / velocity[xi_i], i) * pow(time, -alpha * i - 1.)
+				        / factorial_n_vals[i] / gamma_n_alpha_vals[i];
 			}
 			
 			term2 += get_initial_field(xi) * row_sum;
@@ -431,14 +441,13 @@ void fill_analyt_field(const double alpha, const double time, const double dt_, 
 			double row_sum = 0.;
 			for(int i = 0; i < row_cnt; ++i)
 			{
-				row_sum += pow(- x / velocity[ix_global], i) * pow(eta, -alpha * i - 1.) / factorial_n_vals[i] / gamma_n_alpha_vals[i];
+				row_sum += pow(- x_nm / velocity[x_i], i) * pow(eta, -alpha * i - 1.) / factorial_n_vals[i] / gamma_n_alpha_vals[i];
 			}
 			term1 += get_border_value(time - eta) * row_sum;
-			
+			assert(!std::isnan(term1) && !std::isinf(term1));
 		}
-		assert(!std::isnan(term1) && !std::isinf(term1));
-
-		field[ix_global] = term1 + term2;
+		
+		field[x_i] = term1 + term2;
 	}
 	return;
 }
