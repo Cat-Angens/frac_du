@@ -1,3 +1,4 @@
+#include <cmath>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -70,13 +71,13 @@ void fill_analyt_field(const double alpha, const double time, const double dt, c
 
 int main()
 {
-	const int Nx = 100;
+	const int Nx = 1000;
 	const double dx = 1.;
 
 	const double dt = 0.1;
-	const double finish_time = 20.;
+	const double finish_time = 2.;
 	
-	const double alpha = 0.9;
+	const double alpha = 0.99;
 	const double gamma_alpha = get_Gamma(alpha);
 	
 	// memory effects variables
@@ -101,6 +102,10 @@ int main()
 	//	std::cout << elem << std::endl;
 	//return 0;
 	
+	std::cout << "Test Gamma func\n";
+	std::cout << "0.5: " << sqrt(M_PI) << ", " << get_Gamma(0.5) << std::endl;
+	std::cout << "-0.5: " << sqrt(M_PI) * 2. << ", " << get_Gamma(-0.5) << std::endl;
+	std::cout << "1.5: " << sqrt(M_PI) / 2. << ", " << get_Gamma(1.5) << std::endl;
 	// fields
 	std::vector<double> vel(Nx - 1, 2.);
 	std::vector<double> vel_on_nodes(Nx, 2.);
@@ -110,6 +115,7 @@ int main()
 	std::vector<double> time_deriv_GL_1malpha_before(Nx, 0.);
 	std::vector<double> time_deriv_GL_1malpha_after(Nx, 0.);
 	std::vector<double> sources(Nx, 0.);
+	std::vector<double> phi(Nx);
 	std::vector<double> dphi_dx(Nx);
 	std::vector<double> analyt_solution(Nx);
 	std::vector<double> analyt_solution_frac(Nx);
@@ -134,6 +140,7 @@ int main()
 	for (int ix = 0; ix < Nx; ++ix)
 	{
 		dphi_dx[ix] = get_initial_field_derivative(dx * ix);
+		phi[ix] = get_initial_field(dx * ix);
 	}
 	
 	// solver
@@ -157,10 +164,12 @@ int main()
 	// fprint
 	fprint_vector(std::string("GL_coeffs_1malpha.txt"), GL_coeffs_1malpha);
 	fprint_vector(std::string("dphidx.txt"), dphi_dx);
+	fprint_vector(std::string("phi.txt"), phi);
 	
 	// time cycle
 	while(time < finish_time)
 	{
+		/*
 		const int N_calc_time_layers = std::min(time_layers_cnt, it + 1);
 		
 		// fill fractional time derivatives 1-alpha degree without first term (!!) (implicit scheme)
@@ -228,8 +237,8 @@ int main()
 		fprint_vector("GLfield", it, time_deriv_GL_1malpha_after);
 		fprint_vector("rec2", it, reconstruction_secondpart);
 		fprint_vector("analyt_sol", it, analyt_solution);
-		
-		if(it > 2)
+		*/
+		if(it > 1)
 		{
 			fill_analyt_field(alpha, time, dt, dx, Nx, gamma_n_alpha_vals, factorial_n_vals, vel_on_nodes, analyt_solution_frac);
 			fprint_vector("analyt_frac_sol", it, analyt_solution_frac);
@@ -284,7 +293,7 @@ double get_Gamma(const double alpha)
 	// first term (sum)
 	double term1 = 0.;
 	// number of terms in first sum
-	const int n = 10;
+	const int n = 100;
 	// threshold for integral disecting
 	const double x0 = 2.;
 	for (int i = 0; i < n; ++i)
@@ -302,7 +311,7 @@ double get_Gamma(const double alpha)
 	// second term (integral)
 	double term2 = 0.;
 	// limit for integral
-	const double x_n = 20.;
+	const double x_n = 200.;
 	// integral step
 	const double dx = 0.1;
 	double x = x0 + dx * 0.5;
@@ -377,7 +386,7 @@ void fill_analyt_field(const double alpha, const double time, const double dt_, 
 {
 	
 	assert(field.size() == static_cast<size_t>(Nx));
-	assert(time > dt_);
+	assert(time > dt_ - 0.01);
 	assert(dt_ > 0.); assert(dx > 0.); assert(alpha > 0.);
 	assert(gamma_n_alpha_vals.size() == factorial_n_vals.size());
 	
@@ -411,13 +420,14 @@ void fill_analyt_field(const double alpha, const double time, const double dt_, 
 			double row_sum = 0.;
 			for(int i = 0; i < row_cnt; ++i)
 			{
-				const double mult1 = (i % 2 == 0) ? 1. : -1.;
-				const double mult2 = (i % 2 == 0 || (xi - x) / velocity[xi_i] > 0) ? 1. : -1.;
-				row_sum += mult1 * mult2 * pow( fabs(xi_nm - x_nm) / velocity[xi_i], i) * pow(time, -alpha * i - 1.)
+				const double temp = xi_nm - x_nm / velocity[xi_i];
+				const double mult = (i % 2 == 1 && temp > 0.) ? -1. : 1.;
+				row_sum += mult * pow(fabs(temp), i) * pow(time, -alpha * i - 1.)
 				        / factorial_n_vals[i] / gamma_n_alpha_vals[i];
+				assert(!std::isnan(row_sum) && !std::isinf(row_sum));
 			}
 			
-			term2 += get_initial_field(xi) * row_sum;
+			term2 += get_initial_field(xi) * row_sum * dx / max_x;
 			
 			assert(!std::isnan(term2) && !std::isinf(term2));
 			
@@ -425,7 +435,7 @@ void fill_analyt_field(const double alpha, const double time, const double dt_, 
 		assert(!std::isnan(term2) && !std::isinf(term2));
 		
 		 // TODO обработать отдельно случай t = 0
-		// ѕервое слагаеоме аналитического решени€ - свертка по t
+		// ѕервое слагаемое аналитического решени€ - свертка по t
 		double term1 = 0.;
 		
 		const auto nt = static_cast<int>(time / dt_ + 1.);
@@ -441,9 +451,11 @@ void fill_analyt_field(const double alpha, const double time, const double dt_, 
 			double row_sum = 0.;
 			for(int i = 0; i < row_cnt; ++i)
 			{
-				row_sum += pow(- x_nm / velocity[x_i], i) * pow(eta, -alpha * i - 1.) / factorial_n_vals[i] / gamma_n_alpha_vals[i];
+				const double temp = x_nm / velocity[x_i];
+				const double mult = (i % 2 == 1 && temp > 0) ? -1. : 1.;
+				row_sum += mult * pow(fabs(temp), i) * pow(eta, -alpha * i - 1.) / factorial_n_vals[i] / gamma_n_alpha_vals[i];
 			}
-			term1 += get_border_value(time - eta) * row_sum;
+			term1 += get_border_value(time - eta) * row_sum * dt;
 			assert(!std::isnan(term1) && !std::isinf(term1));
 		}
 		
